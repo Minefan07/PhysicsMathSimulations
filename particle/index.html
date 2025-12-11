@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Particle Simulation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding-top: 60px;
+            /* to avoid overlap with fixed header */
+            background-color: #222222;
+            color: white;
+            width: 100%-10px;
+        }
+
+        .header {
+            background-color: #333333;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 10px;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+
+        .goback {
+            background-color: #222222;
+            top: 0;
+            color: white;
+            left: 0;
+            padding: 10px;
+            font-size: 24px;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        canvas {
+            background-color: #111111;
+            display: block;
+        }
+
+
+        .launch {
+            border-radius: 5px;
+            border: none;
+            background-image: linear-gradient(blue, green);
+            color: white;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .launch:active {
+            background-image: linear-gradient(darkblue, darkgreen);
+        }
+    </style>
+</head>
+
+<body onload="resizeCanvas()" id="body">
+    <div class="header" id="header"><button class="goback" title="Go Back to All Simulations"
+            onclick="javascript:window.location.href='../'">Physics Simulations</button></div>
+    <div id="menu"></div>
+
+    <h1>Particle Simulation</h1>
+    Yeah, this one's pretty straightforward. It's a momentum simulation, but with more balls. Also has Brownian motion
+    for realism.
+
+    <canvas id="simulationCanvas" width="800" height="600" style="border:1px solid #000000;">
+        Your browser does not support the HTML5 canvas tag.
+    </canvas><br>
+
+    Number of Particles: <input type="number" id="particleNo" placeholder="500 is a decent amount" step="1"
+            value="500"><input type="button" id="launch" class="launch" value="Launch!" onclick="runParticles()">
+
+
+    <script>
+        const canvas = document.getElementById('simulationCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const PARTICLE_RADIUS = 5; //pixels
+
+        var frametime = 1 / 60; //seconds
+
+        function resizeCanvas() {
+            const canvas = document.getElementById('simulationCanvas');
+            canvas.width = document.getElementById("body").offsetWidth;
+        }
+
+        //each particle will have x, y, vx, vy, and they all will have the same weight.
+
+        var particles = [{x:100, y:100, vx:10, vy:100}];
+
+        document.addEventListener('resize', function () {
+            resizeCanvas();
+        });
+
+        function outOfBounds(x, y) {
+            var a = false;
+            if (x > canvas.width || x < 0 || y < 0 || y > canvas.height)
+            {
+                a = true;
+            }
+            return a;
+        }
+
+        function changeParticle(x, y, vx, vy, index)
+        {
+            particles[index] = {x, y, vx, vy};
+        }
+
+        function renderParticle(x, y, vx, vy)
+        {
+            ctx.beginPath();
+            ctx.strokeStyle = 'white';
+            ctx.fillStyle = 'white';
+            ctx.arc(x, y, PARTICLE_RADIUS, 0, 2*Math.PI);
+            ctx.fill();
+        }
+
+        function renderParticleAtIndex(index)
+        {
+            renderParticle(particles[index].x, particles[index].y, particles[index].vx, particles[index].vy);
+        }
+
+        function updateParticle(index)
+        {
+            particles[index].x += particles[index].vx * frametime;
+            particles[index].y += particles[index].vy * frametime;
+
+            //flip either x or y velocity and fix bounds if necessary
+            if(outOfBounds(particles[index].x, particles[index].y))
+            {
+                if (particles[index].x < 0) 
+                {
+                    particles[index].x = 0;
+                    particles[index].vx = -particles[index].vx;
+                }
+                if (particles[index].x > canvas.width)
+                {
+                    particles[index].x = canvas.width;
+                    particles[index].vx = -particles[index].vx;
+                }
+                if (particles[index].y < 0)
+                {
+                    particles[index].y = 0;
+                    particles[index].vy = -particles[index].vy;
+                }
+                if (particles[index].y > canvas.height)
+                {
+                    particles[index].y = canvas.height;
+                    particles[index].vy = -particles[index].vy;
+                }
+            }
+
+            //can add acceleration here
+        }
+
+        function clearCanvas() {
+            const canvas = document.getElementById('simulationCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function addParticles(amount)
+        {
+            for (var i = 0; i < amount; i++)
+            {
+                changeParticle(Math.random() * canvas.width, Math.random() * canvas.width, Math.random() * 100, Math.random() * 100, i);
+            }
+        }
+
+        function runParticles() {
+            addParticles((document.getElementById('particleNo').value));
+
+            //iterate through every particle, then draw each one, and do any momentum calculations necessary.
+            const interval = setInterval(() => {
+                clearCanvas();
+                for (var i = 0; i < particles.length; i++)
+                {
+                    updateParticle(i);
+                    renderParticleAtIndex(i);
+                    //console.log(`i: ${i}, x: ${particles[i].x.toFixed(2)}, y: ${particles[i].y.toFixed(2)}`);
+                }
+            }, frametime * 1000);
+        }
+
+    </script>
+</body>
+
+</html>

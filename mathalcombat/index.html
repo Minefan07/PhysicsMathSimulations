@@ -104,6 +104,7 @@
         //idea: Tank game with ammunition, but when you run out, you have to solve math problems to reload.
 
         var ammunition = 20;
+        var firing  = false;
 
         var x = 0; y = 0; vx = 0; vy = 0;
         var facing = 0;
@@ -115,6 +116,9 @@
         var timeStep = 1 / 60; // 60 fps
 
         var turretMass = 0; // determine based on type; three or four types
+        var turretAngle = 0;
+
+        const BULLET_SPEED = 20;
 
         var maxSpeed = 50;
         var frictionAccel = 10;
@@ -123,6 +127,8 @@
         var mouseY = 0;
 
         var keyspressed = [];
+
+        var bullets = [];
 
         var image = new Image();
         image.src = "resources/tank0.png";
@@ -133,9 +139,11 @@
         function fire() {
             if (ammunition > 0) {
                 ammunition--;
+                firing = true;
             }
             else {
                 ammunition = 0; // preventing possibility of negative ammo
+                firing = false;
             }
         }
 
@@ -166,6 +174,8 @@
 
                 //draw code last
                 clearCanvas();
+
+                renderBullets();
 
                 decelerate();
                 renderTank(this.x, this.y);
@@ -221,10 +231,11 @@
         function positionTurret(x, y)
         {
             // find mouse x and y, then determine angle using atan2() and draw with that angle
-            var aimY = mouseY - y - 2*image.height;
-            var aimX = mouseX - x - 2*image.width;
+            var aimY = mouseY - y - image.height;
+            var aimX = mouseX - x - image.width;
 
             var angle = Math.atan2(aimY, aimX);
+            turretAngle = angle;
 
             ctx.save();
             ctx.translate(x + image.width, y + image.height); //center on tank
@@ -253,6 +264,31 @@
             ctx.font = "Arial 24px";
             ctx.fillStyle = "white";
             ctx.fillText(`${ammunition} ammo`, 1, 25);
+        }
+
+        function renderBullets() {
+            if (firing)
+            {
+                createBullet();
+                firing = false;
+            }
+            //render logic
+            for (var i = 0; i < bullets.length; i++) {
+                canvas.fillStyle = 'white';
+                ctx.fillRect(bullets[i][0], bullets[i][1], 3, 3);
+            }
+        }
+
+        function createBullet() {
+            bullets[bullets.length] = {x, y, turretAngle};
+            console.log(bullets[bullets.length-1]);
+        }
+
+        function updateBullets() {
+            for (var i = 0; i < bullets.length; i++) {
+                bullets[i][0] += BULLET_SPEED * Math.cos(bullets[i][2]);
+                bullets[i][1] += BULLET_SPEED * Math.sin(bullets[i][2]);
+            }
         }
 
         function decelerate() {
