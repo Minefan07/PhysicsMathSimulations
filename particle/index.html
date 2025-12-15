@@ -65,6 +65,17 @@
         .launch:active {
             background-image: linear-gradient(darkblue, darkgreen);
         }
+
+
+        input {
+            margin: 5px;
+            background-color: #000000;
+            padding: 5px;
+            border-radius: 3px;
+            border: 0;
+            color: white;
+
+        }
     </style>
 </head>
 
@@ -81,9 +92,10 @@
     </canvas><br>
 
     Number of Particles: <input type="number" id="particleNo" placeholder="500 is a decent amount" step="1"
-        value="500"><br>Mass: min: <input type="number" id="minMass" placeholder="5 by default" step="0.1"
-        value="5"> max: <input type="number" id="maxMass" placeholder="5 by default" step="0.1"
-        value="5"><input type="button" id="launch" class="launch" value="Launch!" onclick="runParticles()">
+        value="500"><br>Mass: min: <input type="number" id="minMass" placeholder="5 by default" step="0.1" value="5">
+    max: <input type="number" id="maxMass" placeholder="5 by default" step="0.1" value="5"><input type="button"
+        id="launch" class="launch" value="Launch!" onclick="runParticles()"><input type="button" id="pause"
+        class="launch" value="Pause" onclick="pause()">
 
     <script>
         const canvas = document.getElementById('simulationCanvas');
@@ -92,11 +104,29 @@
         const minMass = document.getElementById('minMass');
         const maxMass = document.getElementById('maxMass');
 
+        const pauseBtn = document.getElementById('pause');
+
         const PARTICLE_RADIUS = 5; //pixels
-        const PARTICLE_MASS   = 5;
+        const PARTICLE_MASS = 5;
         const GRID_SIZE = 2 * PARTICLE_RADIUS;
 
         var frametime = 1 / 60; //seconds
+
+        var paused = false;
+
+        function pause() {
+            if (paused) {
+                //unpause
+                paused = false;
+                frametime = 1 / 60;
+                pauseBtn.value = "Pause";
+            }
+            else {
+                paused = true;
+                frametime = 0;
+                pauseBtn.value = "Unpause";
+            }
+        }
 
         function resizeCanvas() {
             const canvas = document.getElementById('simulationCanvas');
@@ -127,10 +157,10 @@
 
         function renderParticle(x, y, vx, vy, radius) {
             ctx.beginPath();
-            
+
             var speed = Math.sqrt(vx ** 2 + vy ** 2);
             var color = `hsl(${Math.min(360, speed)}deg 50% 50%)`;
-            
+
             ctx.strokeStyle = color;
             ctx.fillStyle = color;
             ctx.arc(x, y, radius, 0, 2 * Math.PI);
@@ -175,9 +205,8 @@
             ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
 
-        function RND(a, b)
-        {
-            return ((Math.random() * (b-a)) + a);
+        function RND(a, b) {
+            return ((Math.random() * (b - a)) + a);
         }
 
         function addParticles(amount) {
@@ -209,8 +238,8 @@
 
             //TEMP!!
             var mass1 = (particles[i1].mass);
-            var mass2 = (particles[i2].mass); 
-            
+            var mass2 = (particles[i2].mass);
+
             //console.log(`m1: ${particles[i1].mass}, m2: ${particles[i2].mass}`);
 
             const dx = x2 - x1;
@@ -282,7 +311,7 @@
                     x2 += (correction * (1 / mass2)) * nx;
                     y2 += (correction * (1 / mass2)) * ny;
                 }
-                
+
                 //now write data back to particles
 
                 particles[i1].x = x1; particles[i1].y = y1; particles[i1].vx = vx1; particles[i1].vy = vy1;
@@ -299,13 +328,11 @@
         function runParticles() {
             if (parseFloat(minMass.value) < 1.0 || parseFloat(maxMass.value < 1.0)) alert(`Mass too low; defaulting to 1.`);
 
-            if (parseFloat(minMass.value) < 1.0)
-            {
+            if (parseFloat(minMass.value) < 1.0) {
                 minMass.value = 1;
             }
 
-            if (parseFloat(maxMass.value) < 1.0)
-            {
+            if (parseFloat(maxMass.value) < 1.0) {
                 maxMass.value = 1;
             }
 
