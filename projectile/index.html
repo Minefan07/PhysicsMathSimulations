@@ -101,7 +101,7 @@
         <div id="advancedSettings" style="display:none; border:1px solid gray; padding:10px; margin:10px; border-radius:5px;">
             <b>Advanced Options:</b><br>
             <input type="checkbox" id="disableDrag">Disable Air Resistance (No Drag)<br>
-            Custom gravity (m/s²): <input type="number" id="customGravity" placeholder="9.81 m/s² for Earth" value="9.81" step="0.01" disabled><br>
+            Custom gravity (m/s²): <input type="number" id="customGravity" placeholder="9.81 m/s² for Earth" value="9.81" step="0.01"><br>
             Custom Drag Coefficient:<input type="number" id="customDragCoeff" placeholder="0.47 for a sphere" step="0.01" value="0.47"><br>
         </div>
         <input type="number" id="mass" placeholder="Mass (kg)">
@@ -244,6 +244,7 @@
                 const radius = parseFloat(document.getElementById('radius').value);
                 const angle = parseFloat(document.getElementById('angle').value) * (Math.PI / 180); // convert to radians
                 const velocity = parseFloat(document.getElementById('velocity').value);
+                const gravIpt = parseFloat(document.getElementById('customGravity').value);
 
                 var iterations = 0;
 
@@ -268,7 +269,7 @@
                 let y_initial = y;
 
 
-                const g = 9.81; // gravity in m/s^2
+                const g = gravIpt; // gravity in m/s^2
                 const timeStep = 1.0 / 60.0; // time step for simulation
                 // 60 fps
 
