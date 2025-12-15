@@ -112,9 +112,9 @@
             resizeCanvas();
         });
 
-        function outOfBounds(x, y) {
+        function outOfBounds(x, y, mass) {
             var a = false;
-            var padding = PARTICLE_RADIUS;
+            var padding = mass;
             if (x > canvas.width - padding || x < padding || y < padding || y > canvas.height - padding) {
                 a = true;
             }
@@ -148,7 +148,7 @@
             var padding = particles[index].mass;
 
             //flip either x or y velocity and fix bounds if necessary
-            if (outOfBounds(particles[index].x, particles[index].y)) {
+            if (outOfBounds(particles[index].x, particles[index].y, particles[index].mass)) {
                 if (particles[index].x < padding) {
                     particles[index].x = padding;
                     particles[index].vx = -particles[index].vx;
