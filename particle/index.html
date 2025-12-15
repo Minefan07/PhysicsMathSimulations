@@ -165,7 +165,16 @@
             }
 
             //prep for collision checking
-            grid[Math.floor(particles[index].x/GRID_SIZE)][Math.floor(particles[index].y/GRID_SIZE)] = index;
+            try {
+                grid[Math.floor(particles[index].y/GRID_SIZE)][Math.floor(particles[index].x/GRID_SIZE)][index] = index;
+            }
+            catch (error)
+            {
+                console.log(`offending index ${Math.floor(particles[index].y/GRID_SIZE)} ${Math.floor(particles[index].x/GRID_SIZE)} ${index}`);
+            }
+
+            //check that it saved
+            console.log(`${index} > ${grid[Math.floor(particles[index].y/GRID_SIZE)][Math.floor(particles[index].x/GRID_SIZE)]}`);
 
             //can add acceleration here
         }
@@ -188,13 +197,22 @@
         function checkCollision(index)
         {
             //use grid with particles to determine collisions -- use nearest 8 grids
-            var gxi = particles[index].x / GRID_SIZE;
-            var gyi = particles[index].y / GRID_SIZE;
+            var gxi = Math.floor(particles[index].x / GRID_SIZE);
+            var gyi = Math.floor(particles[index].y / GRID_SIZE);
 
-            var suspects = [];
+            //var suspects = [];
 
-            for(var i = 0; i < grid[gxi][gyi].length; i++)
+            try {
+                console.log(grid[gyi][gxi][index]);
+            }
+            catch (error)
             {
+                console.log(`offending index ${Math.floor(particles[index].y/GRID_SIZE)} ${Math.floor(particles[index].x/GRID_SIZE)} ${index}`);
+            }
+
+            for(var i = 0; i < grid[gyi][gxi].length; i++)
+            {
+                console.log(`checking ${particles[grid[gxi][gyi][i]].x} and ${particles[index].x}`);
                 if (isTooClose(particles[grid[gxi][gyi][i]].x, particles[grid[gxi][gyi][i]].y, particles[index].x, particles[index].y)) return true;
                 else return false;
             }
@@ -202,8 +220,8 @@
 
         function isTooClose(x1, y1, x2, y2)
         {
-            if (Math.sqrt(((x2-x1) ** 2) + ((y2-y1) ** 2) )) return true;
-            else return false;
+            console.log((Math.sqrt(((x2-x1) ** 2) + ((y2-y1) ** 2)) <= 2 * PARTICLE_RADIUS) ? (`too close`) : (`not too close`));
+            return (Math.sqrt(((x2-x1) ** 2) + ((y2-y1) ** 2)) <= 2 * PARTICLE_RADIUS);
         }
 
         function runParticles() {
@@ -211,7 +229,11 @@
             for (var i = 0; i < grid.length; i++)
             {
                 grid[i] = new Array(canvas.height/GRID_SIZE);
-                grid[i].fill(new Array());
+                for(var j = 0; j < grid[i].length; j++)
+                {
+                    grid[i][j] = new Array(document.getElementById('particleNo').value);
+                    grid[i][j].fill(-1);
+                }
             }
 
             //iterate through every particle, then draw each one, and do any momentum calculations necessary.
