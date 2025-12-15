@@ -87,6 +87,7 @@
         const ctx = canvas.getContext('2d');
 
         const PARTICLE_RADIUS = 5; //pixels
+        const GRID_SIZE = 2 * PARTICLE_RADIUS;
 
         var frametime = 1 / 60; //seconds
 
@@ -98,6 +99,8 @@
         //each particle will have x, y, vx, vy, and they all will have the same weight.
 
         var particles = [{x:100, y:100, vx:10, vy:100}];
+        var grid = new Array(canvas.width/GRID_SIZE); // grid is 2d array, width of array is Math.ceil( canvas.width / GRID_SIZE );, height is similar
+
 
         document.addEventListener('resize', function () {
             resizeCanvas();
@@ -161,6 +164,9 @@
                 }
             }
 
+            //prep for collision checking
+            grid[Math.floor(particles[index].x/GRID_SIZE)][Math.floor(particles[index].y/GRID_SIZE)] = index;
+
             //can add acceleration here
         }
 
@@ -179,8 +185,34 @@
             }
         }
 
+        function checkCollision(index)
+        {
+            //use grid with particles to determine collisions -- use nearest 8 grids
+            var gxi = particles[index].x / GRID_SIZE;
+            var gyi = particles[index].y / GRID_SIZE;
+
+            var suspects = [];
+
+            for(var i = 0; i < grid[gxi][gyi].length; i++)
+            {
+                if (isTooClose(particles[grid[gxi][gyi][i]].x, particles[grid[gxi][gyi][i]].y, particles[index].x, particles[index].y)) return true;
+                else return false;
+            }
+        }
+
+        function isTooClose(x1, y1, x2, y2)
+        {
+            if (Math.sqrt(((x2-x1) ** 2) + ((y2-y1) ** 2) )) return true;
+            else return false;
+        }
+
         function runParticles() {
             addParticles((document.getElementById('particleNo').value));
+            for (var i = 0; i < grid.length; i++)
+            {
+                grid[i] = new Array(canvas.height/GRID_SIZE);
+                grid[i].fill(new Array());
+            }
 
             //iterate through every particle, then draw each one, and do any momentum calculations necessary.
             const interval = setInterval(() => {
@@ -189,6 +221,7 @@
                 {
                     updateParticle(i);
                     renderParticleAtIndex(i);
+                    checkCollision(i);
                     //console.log(`i: ${i}, x: ${particles[i].x.toFixed(2)}, y: ${particles[i].y.toFixed(2)}`);
                 }
             }, frametime * 1000);
