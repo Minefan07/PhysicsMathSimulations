@@ -102,7 +102,8 @@
             <b>Advanced Options:</b><br>
             <input type="checkbox" id="disableDrag">Disable Air Resistance (No Drag)<br>
             Custom gravity (m/s²): <input type="number" id="customGravity" placeholder="9.81 m/s² for Earth" value="9.81" step="0.01"><br>
-            Custom Drag Coefficient:<input type="number" id="customDragCoeff" placeholder="0.47 for a sphere" step="0.01" value="0.47"><br>
+            Custom Drag Coefficient: <input type="number" id="customDragCoeff" placeholder="0.47 for a sphere" step="0.01" value="0.47"><br>
+            Simulation Speed: <input type="number" id="customSimSpeed" placeholder="1 by default" step="0.1" value="1"><br>
         </div>
         <input type="number" id="mass" placeholder="Mass (kg)">
         <input type="number" id="radius" placeholder="Radius (m)">
@@ -117,7 +118,16 @@
         <script>
             const presets = document.getElementById('presets');
 
+            const simSpeed = document.getElementById('customSimSpeed');
+            var timeStep = parseFloat(simSpeed.value) * (1 / 60);
+
+            const TIME_STEP = 1/60;
+
             var disableDrag = false;
+
+            simSpeed.addEventListener('change', function() {
+                timeStep = parseFloat(simSpeed.value) * (1 / 60);
+            });
 
             presets.addEventListener('change', function() {
                 switch (this.value) {
@@ -268,9 +278,7 @@
                 let x_initial = x;
                 let y_initial = y;
 
-
                 const g = gravIpt; // gravity in m/s^2
-                const timeStep = 1.0 / 60.0; // time step for simulation
                 // 60 fps
 
                 clearCanvas();
@@ -327,7 +335,7 @@
                         printData(`Total Time: ${time.toFixed(2)} s, Final Velocity: ${Math.sqrt(vx * vx + vy * vy).toFixed(2)} m/s, Total Horizontal Distance: ${(x-x_initial).toFixed(2)} m, Path Length: ${drawPath().toFixed(2)} m`);
                     }
 
-                }, timeStep * 1000);
+                }, TIME_STEP * 1000);
             }
 
             function printData(data) {
