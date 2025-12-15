@@ -57,6 +57,9 @@
             padding: 10px 20px;
             font-size: 16px;
             cursor: pointer;
+            position: relative;
+            float: right;
+            top: -30px;
         }
 
         .launch:active {
@@ -71,22 +74,26 @@
     <div id="menu"></div>
 
     <h1>Particle Simulation</h1>
-    Yeah, this one's pretty straightforward. It's a momentum simulation, but with more balls. Also has Brownian motion
-    for realism.
+    Yeah, this one's pretty straightforward. It's a momentum simulation, but with more balls.
 
     <canvas id="simulationCanvas" width="800" height="600" style="border:1px solid #000000;">
         Your browser does not support the HTML5 canvas tag.
     </canvas><br>
 
     Number of Particles: <input type="number" id="particleNo" placeholder="500 is a decent amount" step="1"
-            value="500"><input type="button" id="launch" class="launch" value="Launch!" onclick="runParticles()">
-
+        value="500"><br>Mass: min: <input type="number" id="minMass" placeholder="5 by default" step="0.1"
+        value="5"> max: <input type="number" id="maxMass" placeholder="5 by default" step="0.1"
+        value="5"><input type="button" id="launch" class="launch" value="Launch!" onclick="runParticles()">
 
     <script>
         const canvas = document.getElementById('simulationCanvas');
         const ctx = canvas.getContext('2d');
 
+        const minMass = document.getElementById('minMass');
+        const maxMass = document.getElementById('maxMass');
+
         const PARTICLE_RADIUS = 5; //pixels
+        const PARTICLE_MASS   = 5;
         const GRID_SIZE = 2 * PARTICLE_RADIUS;
 
         var frametime = 1 / 60; //seconds
@@ -98,8 +105,7 @@
 
         //each particle will have x, y, vx, vy, and they all will have the same weight.
 
-        var particles = [{x:100, y:100, vx:10, vy:100}];
-        var grid = new Array(canvas.width/GRID_SIZE); // grid is 2d array, width of array is Math.ceil( canvas.width / GRID_SIZE );, height is similar
+        var particles = [{ x: 100, y: 100, vx: 10, vy: 100, mass: 5 }];
 
 
         document.addEventListener('resize', function () {
@@ -108,75 +114,58 @@
 
         function outOfBounds(x, y) {
             var a = false;
-            if (x > canvas.width || x < 0 || y < 0 || y > canvas.height)
-            {
+            var padding = PARTICLE_RADIUS;
+            if (x > canvas.width - padding || x < padding || y < padding || y > canvas.height - padding) {
                 a = true;
             }
             return a;
         }
 
-        function changeParticle(x, y, vx, vy, index)
-        {
-            particles[index] = {x, y, vx, vy};
+        function changeParticle(x, y, vx, vy, mass, index) {
+            particles[index] = { x, y, vx, vy, mass };
         }
 
-        function renderParticle(x, y, vx, vy)
-        {
+        function renderParticle(x, y, vx, vy, radius) {
             ctx.beginPath();
-            ctx.strokeStyle = 'white';
-            ctx.fillStyle = 'white';
-            ctx.arc(x, y, PARTICLE_RADIUS, 0, 2*Math.PI);
+            
+            var speed = Math.sqrt(vx ** 2 + vy ** 2);
+            var color = `hsl(${Math.min(360, speed)}deg 50% 50%)`;
+            
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+            ctx.arc(x, y, radius, 0, 2 * Math.PI);
             ctx.fill();
         }
 
-        function renderParticleAtIndex(index)
-        {
-            renderParticle(particles[index].x, particles[index].y, particles[index].vx, particles[index].vy);
+        function renderParticleAtIndex(index) {
+            renderParticle(particles[index].x, particles[index].y, particles[index].vx, particles[index].vy, particles[index].mass);
         }
 
-        function updateParticle(index)
-        {
+        function updateParticle(index) {
             particles[index].x += particles[index].vx * frametime;
             particles[index].y += particles[index].vy * frametime;
 
+            var padding = particles[index].mass;
+
             //flip either x or y velocity and fix bounds if necessary
-            if(outOfBounds(particles[index].x, particles[index].y))
-            {
-                if (particles[index].x < 0) 
-                {
-                    particles[index].x = 0;
+            if (outOfBounds(particles[index].x, particles[index].y)) {
+                if (particles[index].x < padding) {
+                    particles[index].x = padding;
                     particles[index].vx = -particles[index].vx;
                 }
-                if (particles[index].x > canvas.width)
-                {
-                    particles[index].x = canvas.width;
+                if (particles[index].x > canvas.width - padding) {
+                    particles[index].x = canvas.width - padding;
                     particles[index].vx = -particles[index].vx;
                 }
-                if (particles[index].y < 0)
-                {
-                    particles[index].y = 0;
+                if (particles[index].y < padding) {
+                    particles[index].y = padding;
                     particles[index].vy = -particles[index].vy;
                 }
-                if (particles[index].y > canvas.height)
-                {
-                    particles[index].y = canvas.height;
+                if (particles[index].y > canvas.height - padding) {
+                    particles[index].y = canvas.height - padding;
                     particles[index].vy = -particles[index].vy;
                 }
             }
-
-            //prep for collision checking
-            try {
-                grid[Math.floor(particles[index].y/GRID_SIZE)][Math.floor(particles[index].x/GRID_SIZE)][index] = index;
-            }
-            catch (error)
-            {
-                console.log(`offending index ${Math.floor(particles[index].y/GRID_SIZE)} ${Math.floor(particles[index].x/GRID_SIZE)} ${index}`);
-            }
-
-            //check that it saved
-            console.log(`${index} > ${grid[Math.floor(particles[index].y/GRID_SIZE)][Math.floor(particles[index].x/GRID_SIZE)]}`);
-
-            //can add acceleration here
         }
 
         function clearCanvas() {
@@ -186,61 +175,146 @@
             ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
 
-        function addParticles(amount)
+        function RND(a, b)
         {
-            for (var i = 0; i < amount; i++)
-            {
-                changeParticle(Math.random() * canvas.width, Math.random() * canvas.width, Math.random() * 100, Math.random() * 100, i);
+            return ((Math.random() * (b-a)) + a);
+        }
+
+        function addParticles(amount) {
+            for (var i = 0; i < amount; i++) {
+                changeParticle(Math.random() * canvas.width, Math.random() * canvas.width, Math.random() * 100, Math.random() * 100, parseFloat(RND(parseFloat(minMass.value), parseFloat(maxMass.value))), i);
+                //console.log(`${minMass.value} ${maxMass.value} ${particles[i].mass}`);
             }
         }
 
-        function checkCollision(index)
-        {
-            //use grid with particles to determine collisions -- use nearest 8 grids
-            var gxi = Math.floor(particles[index].x / GRID_SIZE);
-            var gyi = Math.floor(particles[index].y / GRID_SIZE);
+        function isWithinRadius(x1, y1, x2, y2, radius) {
+            return (Math.sqrt(((x2 - x1) ** 2) + ((y2 - y1) ** 2)) <= radius);
+        }
 
-            //var suspects = [];
-
-            try {
-                console.log(grid[gyi][gxi][index]);
-            }
-            catch (error)
-            {
-                console.log(`offending index ${Math.floor(particles[index].y/GRID_SIZE)} ${Math.floor(particles[index].x/GRID_SIZE)} ${index}`);
-            }
-
-            for(var i = 0; i < grid[gyi][gxi].length; i++)
-            {
-                console.log(`checking ${particles[grid[gxi][gyi][i]].x} and ${particles[index].x}`);
-                if (isTooClose(particles[grid[gxi][gyi][i]].x, particles[grid[gxi][gyi][i]].y, particles[index].x, particles[index].y)) return true;
-                else return false;
+        function checkCollision(index) {
+            //check only nearby particles
+            for (var i = 0; i < particles.length; i++) {
+                if (i != index && isWithinRadius(particles[i].x, particles[i].y, particles[index].x, particles[index].y, particles[i].mass + particles[index].mass)) {
+                    //console.log(`collision between ${i} and ${index}`);
+                    applyCollision(index, i);
+                }
             }
         }
 
-        function isTooClose(x1, y1, x2, y2)
-        {
-            console.log((Math.sqrt(((x2-x1) ** 2) + ((y2-y1) ** 2)) <= 2 * PARTICLE_RADIUS) ? (`too close`) : (`not too close`));
-            return (Math.sqrt(((x2-x1) ** 2) + ((y2-y1) ** 2)) <= 2 * PARTICLE_RADIUS);
+        function applyCollision(i1, i2) {
+            //change momenta of particles a and b
+            // pulling from /momentum
+            var x1 = particles[i1].x; var y1 = particles[i1].y; var vx1 = particles[i1].vx; var vy1 = particles[i1].vy;
+            var x2 = particles[i2].x; var y2 = particles[i2].y; var vx2 = particles[i2].vx; var vy2 = particles[i2].vy;
+
+            //TEMP!!
+            var mass1 = (particles[i1].mass);
+            var mass2 = (particles[i2].mass); 
+            
+            //console.log(`m1: ${particles[i1].mass}, m2: ${particles[i2].mass}`);
+
+            const dx = x2 - x1;
+            const dy = y2 - y1;
+            const distSq = dx * dx + dy * dy;
+            const minDist = mass1 + mass2;
+
+            //console.log(minDist);
+
+            if (distSq <= minDist * minDist) {
+                // COLLISION DETECTED.
+                usetimer = true;
+                timerthingy = 0;
+
+                const dist = Math.sqrt(distSq) || 1e-12;
+                // normal vector (from 1 to 2)
+
+                // unit vector n representing the direction of the n-axis
+                const nx = dx / dist;
+                const ny = dy / dist;
+
+                const nmag = Math.sqrt(nx * nx + ny * ny);
+
+                // tangent vector (needed to preserve all energy?)
+                const tx = -dy / dist;
+                const ty = dx / dist;
+
+
+                // find magnitude of velocity first
+                const v1mag = Math.sqrt(vx1 * vx1 + vy1 * vy1);
+                const v2mag = Math.sqrt(vx2 * vx2 + vy2 * vy2);
+
+                const theta_nt_xy = Math.atan2(ny, nx);
+
+                //find component of both velocity along n hat (the normal) and t hat (the tangent)
+                const v1norm = v1mag * Math.cos(Math.atan2(vy1, vx1) - theta_nt_xy);
+                const v1tan = v1mag * Math.sin(Math.atan2(vy1, vx1) - theta_nt_xy);
+
+                const v2norm = v2mag * Math.cos(Math.atan2(vy2, vx2) - theta_nt_xy);
+                const v2tan = v2mag * Math.sin(Math.atan2(vy2, vx2) - theta_nt_xy);
+
+                // use 1d elastic collision equations
+                const v1new = ((mass1 - mass2) / (mass1 + mass2)) * v1norm + ((2 * mass2) / (mass1 + mass2)) * v2norm;
+                const v2new = ((2 * mass1) / (mass1 + mass2)) * v1norm + ((mass2 - mass1) / (mass1 + mass2)) * v2norm;
+
+                const v1theta_nt_new = Math.atan2(v1tan, v1new);
+                const v2theta_nt_new = Math.atan2(v2tan, v2new);
+
+                const v1theta_xy_new = v1theta_nt_new + theta_nt_xy;
+                const v2theta_xy_new = v2theta_nt_new + theta_nt_xy;
+
+                const v1newmag = Math.sqrt(v1new * v1new + v1tan * v1tan);
+                const v2newmag = Math.sqrt(v2new * v2new + v2tan * v2tan);
+
+                vx1 = v1newmag * Math.cos(v1theta_xy_new);
+                vy1 = v1newmag * Math.sin(v1theta_xy_new);
+
+                vx2 = v2newmag * Math.cos(v2theta_xy_new);
+                vy2 = v2newmag * Math.sin(v2theta_xy_new);
+
+                // positional correction to avoid sinking (proportional to inverse masses)
+                const overlap = minDist - dist;
+                if (overlap > 0) {
+                    const percent = 0.8; // push them mostly out
+                    const correction = (overlap / (1 / mass1 + 1 / mass2)) * percent;
+                    // move spheres opposite ways by correction * (1/mass)
+                    x1 -= (correction * (1 / mass1)) * nx;
+                    y1 -= (correction * (1 / mass1)) * ny;
+                    x2 += (correction * (1 / mass2)) * nx;
+                    y2 += (correction * (1 / mass2)) * ny;
+                }
+                
+                //now write data back to particles
+
+                particles[i1].x = x1; particles[i1].y = y1; particles[i1].vx = vx1; particles[i1].vy = vy1;
+                particles[i2].x = x2; particles[i2].y = y2; particles[i2].vx = vx2; particles[i2].vy = vy2;
+
+            }
+        }
+
+        function isTooClose(x1, y1, x2, y2) {
+            console.log((Math.sqrt(((x2 - x1) ** 2) + ((y2 - y1) ** 2)) <= 2 * PARTICLE_RADIUS) ? (`too close`) : (`not too close`));
+            return (Math.sqrt(((x2 - x1) ** 2) + ((y2 - y1) ** 2)) <= 2 * PARTICLE_RADIUS);
         }
 
         function runParticles() {
-            addParticles((document.getElementById('particleNo').value));
-            for (var i = 0; i < grid.length; i++)
+            if (parseFloat(minMass.value) < 1.0 || parseFloat(maxMass.value < 1.0)) alert(`Mass too low; defaulting to 1.`);
+
+            if (parseFloat(minMass.value) < 1.0)
             {
-                grid[i] = new Array(canvas.height/GRID_SIZE);
-                for(var j = 0; j < grid[i].length; j++)
-                {
-                    grid[i][j] = new Array(document.getElementById('particleNo').value);
-                    grid[i][j].fill(-1);
-                }
+                minMass.value = 1;
             }
+
+            if (parseFloat(maxMass.value) < 1.0)
+            {
+                maxMass.value = 1;
+            }
+
+            addParticles((document.getElementById('particleNo').value));
 
             //iterate through every particle, then draw each one, and do any momentum calculations necessary.
             const interval = setInterval(() => {
                 clearCanvas();
-                for (var i = 0; i < particles.length; i++)
-                {
+                for (var i = 0; i < particles.length; i++) {
                     updateParticle(i);
                     renderParticleAtIndex(i);
                     checkCollision(i);
