@@ -67,6 +67,9 @@
             padding: 10px 20px;
             font-size: 16px;
             cursor: pointer;
+            position: relative;
+            float: right;
+            top: -10px;
         }
 
         .launch:active {
@@ -88,11 +91,16 @@
         Your browser does not support the HTML5 canvas tag.
     </canvas><br>
 
+
     <input type="checkbox" id="advancedOptions"
         onclick="document.getElementById('advancedSettings').style.display = this.checked ? 'block' : 'none';"> Show
-    Advanced Options | <input type="checkbox" id="pauseOnCollision" checked onclick="pauseOnCollision = this.checked;"> Pause
-    Cinematically on Collision | <input type="button" value="Stop" id="stop" class="launch" onclick="stop()">
+    Advanced Options | <input type="checkbox" id="pauseOnCollision" checked onclick="pauseOnCollision = this.checked;">
+    Pause
+    Cinematically on Collision | Show Grid: <input type="checkbox" id="grid" value="Show Grid" onclick="drawTestGrid()"
+        onchange="drawGrid = this.checked;"> <input type="button" id="go" class="launch" value="Collide!"
+        onclick="go()"><input type="button" id="pause" class="launch" value="Pause" onclick="pause()">
     <br>
+
 
     <div id="advancedSettings"
         style="display:none; border:1px solid gray; padding:10px; margin:10px; border-radius:5px;">
@@ -130,9 +138,6 @@
     <input type="number" id="velocity2" placeholder="Initial Velocity of Sphere 2 (m/s)">
     <input type="number" id="angle2" placeholder="Initial Angle of Sphere 2"><br>
 
-    <input type="button" id="go" class="launch" value="Collide!" onclick="go()">
-    Show Grid: <input type="checkbox" id="grid" class="launch" value="Show Grid" onclick="drawTestGrid()"
-        onchange="drawGrid = this.checked;">
     <br><br>
 
     <div id="data"></div>
@@ -154,7 +159,14 @@
 
         var cutoffIpt = document.getElementById('velocityCutoff');
 
+        const pauseBtn = document.getElementById('pause');
+
         var collideWalls = true;
+
+        var renderedFrameRate = 0;
+
+        const TIME_STEP = 1 / 60;
+        var timeStep = TIME_STEP;
 
         var pauseOnCollision = true;
         var pauseRadius = 2; // in addition to internal radius of objects
@@ -162,20 +174,20 @@
 
         var drawGrid = false;
 
-        var done_moving = false;
+        var paused = false;
 
-        function stop() {
-            if (!done_moving) {
-                var stopBtn = document.getElementById("stop");
-                done_moving = true; //invert
-                stopBtn.value = "Simulation Stopped";
+        function pause() {
+            if (paused) {
+                //unpause
+                paused = false;
+                timeStep = 1 / 60;
+                pauseBtn.value = "Pause";
             }
-        }
-
-        function unStop() {
-            done_moving = false;
-            var stopBtn = document.getElementById("stop");
-            stopBtn.value = "Stop";
+            else {
+                paused = true;
+                timeStep = 0;
+                pauseBtn.value = "Unpause";
+            }
         }
 
         function resizeCanvas() {
@@ -245,7 +257,7 @@
             let vi_2 = parseFloat(document.getElementById('velocity2').value);
             let thetai_2 = parseFloat(document.getElementById('angle2').value) * Math.PI / 180;
 
-            unStop();
+            paused = false;
 
             if (isNaN(mass1) || isNaN(vi_1) || isNaN(mass2) || isNaN(vi_2) ||
                 isNaN(thetai_1) || isNaN(thetai_2)) {
@@ -330,10 +342,10 @@
                         //timeStep = 1 / (60 * pauseSlowdownAmnt); //old model
 
                         var distWORadius = distTest - (radius * 2); // minimum 0; maximum is pauseRadius
-                        var avgvel12     = (Math.sqrt(vx1 * vx1 + vy1 * vy1) + Math.sqrt(vx2 * vx2 + vy2 * vy2))/2;
+                        var avgvel12 = (Math.sqrt(vx1 * vx1 + vy1 * vy1) + Math.sqrt(vx2 * vx2 + vy2 * vy2)) / 2;
 
                         //      prevents divide by 0 | inverts distWORad. and clamps it to [0,1]
-                        timeStep = 1 / (60 + 60 * (((pauseRadius - distWORadius) / pauseRadius) * (avgvel12/10) * (pauseSlowdownAmnt - 1))); //no divide by zero either!
+                        timeStep = 1 / (60 + 60 * (((pauseRadius - distWORadius) / pauseRadius) * (avgvel12 / 10) * (pauseSlowdownAmnt - 1))); //no divide by zero either!
 
                         //new code: slow down radially for smooth animation: WORKS GREAT!
                     }
@@ -343,10 +355,12 @@
                 }
 
                 // update positions
-                x1 += vx1 * timeStep;
-                y1 += vy1 * timeStep;
-                x2 += vx2 * timeStep;
-                y2 += vy2 * timeStep;
+                if (!paused) {
+                    x1 += vx1 * timeStep;
+                    y1 += vy1 * timeStep;
+                    x2 += vx2 * timeStep;
+                    y2 += vy2 * timeStep;
+                }
 
                 // wall collisions for sphere 1 (flip only the relevant component)
                 if (isOutOfBounds(x1, y1, radius)) {
@@ -494,10 +508,12 @@
                     clearInterval(interval);
                 }
 
-
                 timerthingy++;
-                iterations++;
-                time += timeStep;
+
+                if (!paused) {
+                    iterations++;
+                    time += timeStep;
+                }
 
                 // draw
                 clearCanvas();

@@ -2,6 +2,7 @@
 <html>
 
 <head>
+    <link rel="icon" href="./favicon.png" type="image/png">
     <title>Particle Simulation</title>
     <style>
         body {
@@ -76,6 +77,10 @@
             color: white;
 
         }
+
+        .fpsdispl {
+            float: right;
+        }
     </style>
 </head>
 
@@ -85,15 +90,16 @@
     <div id="menu"></div>
 
     <h1>Particle Simulation</h1>
-    Yeah, this one's pretty straightforward. It's a momentum simulation, but with more balls.
+    Yeah, this one's pretty straightforward. It's a momentum simulation, but with more balls. <span id="fpsdispl"
+        class="fpsdispl">60 FPS</span>
 
     <canvas id="simulationCanvas" width="800" height="600" style="border:1px solid #000000;">
         Your browser does not support the HTML5 canvas tag.
-    </canvas><br>
+    </canvas>
 
     Number of Particles: <input type="number" id="particleNo" placeholder="500 is a decent amount" step="1"
-        value="500"><br>Mass: min: <input type="number" id="minMass" placeholder="5 by default" step="0.1" value="5">
-    max: <input type="number" id="maxMass" placeholder="5 by default" step="0.1" value="5"><input type="button"
+        value="500" min="1"><br>Mass: min: <input type="number" id="minMass" placeholder="5 by default" step="0.1" value="5" min="1">
+    max: <input type="number" id="maxMass" placeholder="5 by default" step="0.1" value="5" min="1"><input type="button"
         id="launch" class="launch" value="Launch!" onclick="runParticles()"><input type="button" id="pause"
         class="launch" value="Pause" onclick="pause()">
 
@@ -340,6 +346,8 @@
 
             //iterate through every particle, then draw each one, and do any momentum calculations necessary.
             const interval = setInterval(() => {
+                const fps1 = performance.now();
+
                 clearCanvas();
                 for (var i = 0; i < particles.length; i++) {
                     updateParticle(i);
@@ -347,7 +355,14 @@
                     checkCollision(i);
                     //console.log(`i: ${i}, x: ${particles[i].x.toFixed(2)}, y: ${particles[i].y.toFixed(2)}`);
                 }
+
+                const fps2 = performance.now();
+                displayFPS(1000 / (fps2 - fps1), fps2-fps1);
             }, frametime * 1000);
+        }
+
+        function displayFPS(fps, ftime) {
+            document.getElementById("fpsdispl").innerText = `${Math.min(Math.round(fps), 60)} FPS, ${Math.round(ftime)} ms`;
         }
 
     </script>

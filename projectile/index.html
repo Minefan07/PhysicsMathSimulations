@@ -1,360 +1,399 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <title>Projectile Motion Simulation</title>
-        <link rel="icon" href="../images/favicon.png" type="image/png">
-        <style>
-            body {
-                font-family: Arial, sans-serif;
-                margin: 20px;
-                padding-top: 60px; /* to avoid overlap with fixed header */
-                background-color: #222222;
-                color: white;
-                width: 100%-10px;
+
+<head>
+    <title>Projectile Motion Simulation</title>
+    <link rel="icon" href="../images/favicon.png" type="image/png">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding-top: 60px;
+            /* to avoid overlap with fixed header */
+            background-color: #222222;
+            color: white;
+            width: 100%-10px;
+        }
+
+        .header {
+            background-color: #333333;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 10px;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+
+        .goback {
+            background-color: #222222;
+            top: 0;
+            color: white;
+            left: 0;
+            padding: 10px;
+            font-size: 24px;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        canvas {
+            background-color: #111111;
+            display: block;
+        }
+
+        input {
+            margin: 5px;
+            background-color: #000000;
+            padding: 5px;
+            border-radius: 3px;
+            border: 0;
+            color: white;
+
+        }
+
+        .launch {
+            border-radius: 5px;
+            border: none;
+            background-image: linear-gradient(blue, green);
+            color: white;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            float: right;
+            position: relative;
+            top: -70px;
+        }
+
+        .launch:active {
+            background-image: linear-gradient(darkblue, darkgreen);
+        }
+    </style>
+</head>
+
+<body onload="resizeCanvas()" id="body">
+    <div class="header" id="header"><button class="goback" title="Go Back to All Simulations"
+            onclick="javascript:window.location.href='../'">Physics Simulations</button></div>
+    <div id="menu"></div>
+
+    Due to my want to be able to calculate the approximate trajectory of spherical objects considering drag, I decided
+    to make a 2D physics calculator that does exactly that.<br>
+    This simulation calculates the trajectory of a projectile launched at a specified angle and initial velocity, taking
+    into account air resistance based on the object's size and mass.<br>
+    The simulation updates the position of the projectile in real-time and displays its path on a 2D canvas.<br><br>
+
+    <h1>Projectile Motion Simulation</h1>
+    Watch the simulation to see the path of the projectile.<br>
+
+    <canvas id="simulationCanvas" width="800" height="600" style="border:1px solid #000000;">
+        Your browser does not support the HTML5 canvas tag.
+    </canvas><br>
+
+    <input type="checkbox" id="advancedOptions"
+        onclick="document.getElementById('advancedSettings').style.display = this.checked ? 'block' : 'none';"> Show
+    Advanced Options
+    | Presets <select id="presets">
+        <option value="">None</option>
+        <option value="baseball">Baseball</option>
+        <option value="golfball">Golf Ball</option>
+        <option value="soccerball">Soccer Ball</option>
+        <option value="basketball">Basketball</option>
+        <option value="tennisball">Tennis Ball</option>
+    </select>
+    <br>
+    <div id="advancedSettings"
+        style="display:none; border:1px solid gray; padding:10px; margin:10px; border-radius:5px;">
+        <b>Advanced Options:</b><br>
+        <input type="checkbox" id="disableDrag">Disable Air Resistance (No Drag)<br>
+        Custom gravity (m/s²): <input type="number" id="customGravity" placeholder="9.81 m/s² for Earth" value="9.81"
+            step="0.01"><br>
+        Custom Drag Coefficient: <input type="number" id="customDragCoeff" placeholder="0.47 for a sphere" step="0.01"
+            value="0.47"><br>
+        Simulation Speed: <input type="number" id="customSimSpeed" placeholder="1 by default" step="0.1" value="1"
+            min="0.0000001"><br>
+    </div>
+    <input type="number" id="mass" placeholder="Mass (kg)">
+    <input type="number" id="radius" placeholder="Radius (m)">
+    <input type="number" id="angle" placeholder="Launch Angle (degrees)">
+    <input type="number" id="velocity" placeholder="Initial Velocity (m/s)">
+    Grid Size: <input type="number" id="gridSize" placeholder="Pixels per Meter" value="50"
+        onchange="CANVAS_SCALE = parseFloat(this.value);" min="0.0000000001"><br>
+    <input type="button" id="launch" class="launch" value="Launch!" onclick="launchProjectile()">
+    <input type="button" id="pause" class="launch" value="Pause" onclick="pause()">
+    <input type="button" id="grid" class="launch" value="Show Grid" onclick="drawTestGrid()">
+    <br><br>
+
+    <div id="data"></div>
+    <script>
+        const presets = document.getElementById('presets');
+
+        const simSpeed = document.getElementById('customSimSpeed');
+        var timeStep = parseFloat(simSpeed.value) * (1 / 60);
+
+        const pauseBtn = document.getElementById('pause');
+
+        const TIME_STEP = 1 / 60;
+
+        var disableDrag = false;
+        var paused = false;
+
+        simSpeed.addEventListener('change', function () {
+            timeStep = parseFloat(simSpeed.value) * TIME_STEP;
+        });
+
+        function pause() {
+            if (paused) {
+                //unpause
+                paused = false;
+                timeStep = TIME_STEP * parseFloat(simSpeed.value);
+                pauseBtn.value = "Pause";
             }
-            
-            .header {
-                background-color: #333333;
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                padding: 10px;
-                font-size: 24px;
-                font-weight: bold;
-                margin-bottom: 20px;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                z-index: 1000;
+            else {
+                paused = true;
+                timeStep = 0;
+                pauseBtn.value = "Unpause";
+            }
+        }
+
+        presets.addEventListener('change', function () {
+            switch (this.value) {
+                case 'baseball':
+                    document.getElementById('mass').value = 0.145; // kg
+                    document.getElementById('radius').value = 0.0366; // m
+                    break;
+                case 'golfball':
+                    document.getElementById('mass').value = 0.0459; // kg
+                    document.getElementById('radius').value = 0.02135; // m
+                    break;
+                case 'soccerball':
+                    document.getElementById('mass').value = 0.43; // kg
+                    document.getElementById('radius').value = 0.11; // m
+                    break;
+                case 'basketball':
+                    document.getElementById('mass').value = 0.625; // kg
+                    document.getElementById('radius').value = 0.12; // m
+                    break;
+                case 'tennisball':
+                    document.getElementById('mass').value = 0.057; // kg
+                    document.getElementById('radius').value = 0.0335; // m
+                    break;
+                default:
+                    document.getElementById('mass').value = '';
+                    document.getElementById('radius').value = '';
+            }
+        });
+
+        const dragCheckbox = document.getElementById('disableDrag');
+        const customDragInput = document.getElementById('customDragCoeff');
+
+        dragCheckbox.addEventListener('change', function () {
+            if (this.checked) {
+                customDragInput.disabled = true;
+                disableDrag = true;
+            } else {
+                customDragInput.disabled = false;
+                disableDrag = false;
+            }
+        });
+
+        var CANVAS_SCALE = 50; // pixels per meter
+
+        function resizeCanvas() {
+            const canvas = document.getElementById('simulationCanvas');
+            canvas.width = document.getElementById("body").offsetWidth;
+        }
+
+        function findDrag(velocity, radius) {
+            if (disableDrag) {
+                return 0;
+            }
+            else {
+                const airDensity = 1.225; // kg/m^3
+                const dragCoefficient = customDragInput.value; // for a sphere
+                const area = Math.PI * Math.pow(radius, 2); // cross-sectional area
+
+                return 0.5 * airDensity * dragCoefficient * area * Math.pow(velocity, 2);
+            }
+        }
+
+        var pathPoints = [];
+
+        function clearCanvas() {
+            const canvas = document.getElementById('simulationCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawPath();
+        }
+
+        function render3dSimulation(x, y) {
+            const canvas = document.getElementById('simulationCanvas');
+            const ctx = canvas.getContext('2d');
+            clearCanvas();
+            ctx.fillStyle = 'blue';
+
+            pathPoints.push({ x: x, y: y });
+        }
+
+        function drawPath() {
+            // 2d path drawing -- from discrete points
+            const canvas = document.getElementById('simulationCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.strokeStyle = 'white';
+
+            var length = 0;
+            for (let i = 1; i < pathPoints.length; i++) {
+                const p1 = pathPoints[i - 1];
+                const p2 = pathPoints[i];
+                ctx.beginPath();
+                ctx.moveTo(p1.x * CANVAS_SCALE, canvas.height - (p1.y * CANVAS_SCALE));
+                ctx.lineTo(p2.x * CANVAS_SCALE, canvas.height - (p2.y * CANVAS_SCALE));
+                ctx.stroke();
+
+                //find arc length
+                length += Math.sqrt(Math.pow((p2.x - p1.x), 2) + Math.pow((p2.y - p1.y), 2));
             }
 
-            .goback {
-                background-color: #222222;
-                top: 0;
-                color:white;
-                left: 0;
-                padding: 10px;
-                font-size: 24px;
-                font-weight: bold;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                z-index: 1000;
-                border: none;
-                border-radius: 10px;
-                cursor: pointer;
-            }
-            
-            canvas {
-                background-color: #111111;
-                display: block;
-            }
+            return length;
+        }
 
-            input {
-                margin: 5px;
-                background-color:#000000;
-                padding: 5px;
-                border-radius: 3px;
-                border:0;
-                color: white;
-
+        function drawTestGrid() {
+            const canvas = document.getElementById('simulationCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.strokeStyle = 'gray';
+            for (let x = 0; x <= canvas.width; x += CANVAS_SCALE) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
             }
-
-            .launch {
-                border-radius: 5px;
-                border:none;
-                background-image: linear-gradient(blue, green);
-                color: white;
-                padding: 10px 20px;
-                font-size: 16px;
-                cursor: pointer;
+            for (let y = 0; y <= canvas.height; y += CANVAS_SCALE) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
             }
+        }
 
-            .launch:active {
-                background-image: linear-gradient(darkblue, darkgreen);
+        function launchProjectile() {
+            const mass = parseFloat(document.getElementById('mass').value);
+            const radius = parseFloat(document.getElementById('radius').value);
+            const angle = parseFloat(document.getElementById('angle').value) * (Math.PI / 180); // convert to radians
+            const velocity = parseFloat(document.getElementById('velocity').value);
+            const gravIpt = parseFloat(document.getElementById('customGravity').value);
+            const speedIpt = parseFloat(simSpeed.value);
+
+            var iterations = 0;
+
+            var time = 0;
+
+            var done_moving = false;
+
+            if (isNaN(mass) || isNaN(radius) || isNaN(angle) || isNaN(velocity) || isNaN(speedIpt) || (speedIpt < 0)) {
+                alert("Please enter valid numbers for all fields.");
+                return;
             }
 
-        </style>
-    </head>
-    <body onload="resizeCanvas()" id="body">
-        <div class="header" id="header"><button class="goback" title="Go Back to All Simulations" onclick="javascript:window.location.href='../'">Physics Simulations</button></div>
-        <div id="menu"></div>
+            // Initial velocity components
+            let vx = velocity * Math.cos(angle);
+            let vy = velocity * Math.sin(angle);
 
-        Due to my want to be able to calculate the approximate trajectory of spherical objects considering drag, I decided to make a 2D physics calculator that does exactly that.<br>
-        This simulation calculates the trajectory of a projectile launched at a specified angle and initial velocity, taking into account air resistance based on the object's size and mass.<br>
-        The simulation updates the position of the projectile in real-time and displays its path on a 2D canvas.<br><br>
+            let radiusActual = radius * CANVAS_SCALE;
+            let x = radius; // start at radius distance
+            let y = radius; // start at radius height
+            let maxHeight = 0;
 
-        <h1>Projectile Motion Simulation</h1>
-        Watch the simulation to see the path of the projectile.<br>
+            let x_initial = x;
+            let y_initial = y;
 
-        <canvas id="simulationCanvas" width="800" height="600" style="border:1px solid #000000;">
-            Your browser does not support the HTML5 canvas tag.
-        </canvas><br>
+            const g = gravIpt; // gravity in m/s^2
+            // 60 fps
 
-        <input type="checkbox" id="advancedOptions" onclick="document.getElementById('advancedSettings').style.display = this.checked ? 'block' : 'none';"> Show Advanced Options
-        | Presets <select id="presets">
-            <option value="">None</option>
-            <option value="baseball">Baseball</option>
-            <option value="golfball">Golf Ball</option>
-            <option value="soccerball">Soccer Ball</option>
-            <option value="basketball">Basketball</option>
-            <option value="tennisball">Tennis Ball</option>
-        </select>
-        <br>
-        <div id="advancedSettings" style="display:none; border:1px solid gray; padding:10px; margin:10px; border-radius:5px;">
-            <b>Advanced Options:</b><br>
-            <input type="checkbox" id="disableDrag">Disable Air Resistance (No Drag)<br>
-            Custom gravity (m/s²): <input type="number" id="customGravity" placeholder="9.81 m/s² for Earth" value="9.81" step="0.01"><br>
-            Custom Drag Coefficient: <input type="number" id="customDragCoeff" placeholder="0.47 for a sphere" step="0.01" value="0.47"><br>
-            Simulation Speed: <input type="number" id="customSimSpeed" placeholder="1 by default" step="0.1" value="1"><br>
-        </div>
-        <input type="number" id="mass" placeholder="Mass (kg)">
-        <input type="number" id="radius" placeholder="Radius (m)">
-        <input type="number" id="angle" placeholder="Launch Angle (degrees)">
-        <input type="number" id="velocity" placeholder="Initial Velocity (m/s)">
-        Grid Size: <input type="number" id="gridSize" placeholder="Pixels per Meter" value="50" onchange="CANVAS_SCALE = parseFloat(this.value);"><br>
-        <input type="button" id="launch" class="launch" value="Launch!" onclick="launchProjectile()">
-        <input type="button" id="grid" class="launch" value="Show Grid" onclick="drawTestGrid()">
-        <br><br>
+            clearCanvas();
+            pathPoints = [];
 
-        <div id="data"></div>
-        <script>
-            const presets = document.getElementById('presets');
+            render3dSimulation(x, y);
 
-            const simSpeed = document.getElementById('customSimSpeed');
-            var timeStep = parseFloat(simSpeed.value) * (1 / 60);
+            const interval = setInterval(() => {
+                const dragForce = findDrag(Math.sqrt(vx * vx + vy * vy), radius);
+                const dragAcceleration = dragForce / mass;
 
-            const TIME_STEP = 1/60;
+                // Update velocities considering drag
+                const dragAx = (dragAcceleration * Math.cos(Math.atan(vy / vx)));
+                const dragAy = (dragAcceleration * Math.sin(Math.atan(vy / vx)));
 
-            var disableDrag = false;
+                vx -= dragAx * timeStep;
+                vy -= (g + dragAy) * timeStep;
 
-            simSpeed.addEventListener('change', function() {
-                timeStep = parseFloat(simSpeed.value) * (1 / 60);
-            });
+                // Update positions
+                x += vx * timeStep;
+                y += vy * timeStep;
 
-            presets.addEventListener('change', function() {
-                switch (this.value) {
-                    case 'baseball':
-                        document.getElementById('mass').value = 0.145; // kg
-                        document.getElementById('radius').value = 0.0366; // m
-                        break;
-                    case 'golfball':
-                        document.getElementById('mass').value = 0.0459; // kg
-                        document.getElementById('radius').value = 0.02135; // m
-                        break;
-                    case 'soccerball':
-                        document.getElementById('mass').value = 0.43; // kg
-                        document.getElementById('radius').value = 0.11; // m
-                        break;
-                    case 'basketball':
-                        document.getElementById('mass').value = 0.625; // kg
-                        document.getElementById('radius').value = 0.12; // m
-                        break;
-                    case 'tennisball':
-                        document.getElementById('mass').value = 0.057; // kg
-                        document.getElementById('radius').value = 0.0335; // m
-                        break;
-                    default:
-                        document.getElementById('mass').value = '';
-                        document.getElementById('radius').value = '';
+                // track maximum height
+
+                if (y > maxHeight) maxHeight = y;
+
+                //console.log(`x: ${x}, y: ${y}, vx: ${vx}, vy: ${vy}, angle: ${Math.atan(vy/vx)*(180/Math.PI)}`);
+
+                // Stop simulation if projectile hits the ground
+                if (y <= radius) {
+                    done_moving = true;
+                    clearInterval(interval);
                 }
-            });
 
-            const dragCheckbox = document.getElementById('disableDrag');
-            const customDragInput = document.getElementById('customDragCoeff');
-
-            dragCheckbox.addEventListener('change', function() {
-                if (this.checked) {
-                    customDragInput.disabled = true;
-                    disableDrag = true;
-                } else {
-                    customDragInput.disabled = false;
-                    disableDrag = false;
-                }
-            });
-
-            var CANVAS_SCALE = 50; // pixels per meter
-
-            function resizeCanvas() {
-                const canvas = document.getElementById('simulationCanvas');
-                canvas.width = document.getElementById("body").offsetWidth;
-            }
-
-            function findDrag(velocity, radius) {
-                if (disableDrag) {
-                    return 0;
-                }
-                else 
-                {
-                    const airDensity = 1.225; // kg/m^3
-                    const dragCoefficient = customDragInput.value; // for a sphere
-                    const area = Math.PI * Math.pow(radius, 2); // cross-sectional area
-
-                    return 0.5 * airDensity * dragCoefficient * area * Math.pow(velocity, 2);
-                }
-            }
-
-            var pathPoints = [];
-
-            function clearCanvas() {
-                const canvas = document.getElementById('simulationCanvas');
-                const ctx = canvas.getContext('2d');
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                drawPath();
-            }
-
-            function render3dSimulation(x,y) {
-                const canvas = document.getElementById('simulationCanvas');
-                const ctx = canvas.getContext('2d');
-                clearCanvas();
-                ctx.fillStyle = 'blue';
-
-                pathPoints.push({x: x, y: y});
-            }
-
-            function drawPath() {
-                // 2d path drawing -- from discrete points
-                const canvas = document.getElementById('simulationCanvas');
-                const ctx = canvas.getContext('2d');
-                ctx.strokeStyle = 'white';
-
-                var length = 0;
-                for (let i = 1; i < pathPoints.length; i++) {
-                    const p1 = pathPoints[i - 1];
-                    const p2 = pathPoints[i];
-                    ctx.beginPath();
-                    ctx.moveTo(p1.x * CANVAS_SCALE, canvas.height - (p1.y * CANVAS_SCALE));
-                    ctx.lineTo(p2.x * CANVAS_SCALE, canvas.height - (p2.y * CANVAS_SCALE));
-                    ctx.stroke();
-
-                    //find arc length
-                    length += Math.sqrt(Math.pow((p2.x - p1.x),2) + Math.pow((p2.y - p1.y),2));
-                }
-
-                return length;
-            }
-
-            function drawTestGrid() {
-                const canvas = document.getElementById('simulationCanvas');
-                const ctx = canvas.getContext('2d');
-                ctx.strokeStyle = 'gray';
-                for (let x = 0; x <= canvas.width; x += CANVAS_SCALE) {
-                    ctx.beginPath();
-                    ctx.moveTo(x, 0);
-                    ctx.lineTo(x, canvas.height);
-                    ctx.stroke();
-                }
-                for (let y = 0; y <= canvas.height; y += CANVAS_SCALE) {
-                    ctx.beginPath();
-                    ctx.moveTo(0, y);
-                    ctx.lineTo(canvas.width, y);
-                    ctx.stroke();
-                }
-            }
-
-            function launchProjectile() {
-                const mass = parseFloat(document.getElementById('mass').value);
-                const radius = parseFloat(document.getElementById('radius').value);
-                const angle = parseFloat(document.getElementById('angle').value) * (Math.PI / 180); // convert to radians
-                const velocity = parseFloat(document.getElementById('velocity').value);
-                const gravIpt = parseFloat(document.getElementById('customGravity').value);
-
-                var iterations = 0;
-
-                var time = 0;
-
-                var done_moving = false;
-
-                if (isNaN(mass) || isNaN(radius) || isNaN(angle) || isNaN(velocity)) {
-                    alert("Please enter valid numbers for all fields.");
-                    return;
-                }
-
-                // Initial velocity components
-                let vx = velocity * Math.cos(angle);
-                let vy = velocity * Math.sin(angle);
-
-                let radiusActual = radius*CANVAS_SCALE;
-                let x = radius; // start at radius distance
-                let y = radius; // start at radius height
-
-                let x_initial = x;
-                let y_initial = y;
-
-                const g = gravIpt; // gravity in m/s^2
-                // 60 fps
-
-                clearCanvas();
-                pathPoints = [];
-
-                render3dSimulation(x,y);
-
-                const interval = setInterval(() => {
-                    const dragForce = findDrag(Math.sqrt(vx * vx + vy * vy), radius);
-                    const dragAcceleration = dragForce / mass;
-
-                    // Update velocities considering drag
-                    const dragAx = (dragAcceleration * Math.cos(Math.atan(vy/vx)));
-                    const dragAy = (dragAcceleration * Math.sin(Math.atan(vy/vx)));
-
-                    vx -= dragAx * timeStep;
-                    vy -= (g + dragAy) * timeStep;
-
-                    // Update positions
-                    x += vx * timeStep;
-                    y += vy * timeStep;
-
-                    //console.log(`x: ${x}, y: ${y}, vx: ${vx}, vy: ${vy}, angle: ${Math.atan(vy/vx)*(180/Math.PI)}`);
-
-                    // Stop simulation if projectile hits the ground
-                    if (y <= radius) {
-                        done_moving = true;
-                        clearInterval(interval);
-                    }
-
+                if (!paused) {
                     iterations++;
 
                     time = iterations * timeStep;
+                }
 
-                    render3dSimulation(x,y);
+                render3dSimulation(x, y);
 
-                    // Draw projectile
-                    const canvasX = x * CANVAS_SCALE; // scale for visualization
-                    const canvasY = document.getElementById('simulationCanvas').height - (y * CANVAS_SCALE); // invert y for canvas coordinates
-                    const ctx = document.getElementById('simulationCanvas').getContext('2d');
-                    ctx.beginPath();
-                    ctx.arc(canvasX, canvasY, radius*CANVAS_SCALE, 0, 2 * Math.PI);
-                    ctx.fill(); 
-
-                    // Print data
-                    if (!done_moving)
-                    {
-                        printData(`Time: ${time.toFixed(2)} s, X: ${x.toFixed(2)} m, Y: ${y.toFixed(2)} m Velocity: ${Math.sqrt(vx * vx + vy * vy).toFixed(2)} m/s`);
-                        drawVector(ctx, canvasX, canvasY, vx, vy, 'red'); // velocity vector
-                        drawVector(ctx, canvasX, canvasY, dragAx, dragAy, 'yellow'); //acceleration vector
-                    }
-                    else 
-                    {
-                        printData(`Total Time: ${time.toFixed(2)} s, Final Velocity: ${Math.sqrt(vx * vx + vy * vy).toFixed(2)} m/s, Total Horizontal Distance: ${(x-x_initial).toFixed(2)} m, Path Length: ${drawPath().toFixed(2)} m`);
-                    }
-
-                }, TIME_STEP * 1000);
-            }
-
-            function printData(data) {
-                const dataDiv = document.getElementById('data');
-                dataDiv.innerHTML = data;
-            }
-
-            function drawVector(ctx, startX, startY, vecX, vecY, color) {
-                ctx.strokeStyle = color;
+                // Draw projectile
+                const canvasX = x * CANVAS_SCALE; // scale for visualization
+                const canvasY = document.getElementById('simulationCanvas').height - (y * CANVAS_SCALE); // invert y for canvas coordinates
+                const ctx = document.getElementById('simulationCanvas').getContext('2d');
                 ctx.beginPath();
-                ctx.moveTo(startX, startY);
-                ctx.lineTo(startX + vecX, startY - vecY); // invert y for canvas coordinates
-                ctx.stroke();
-            }
+                ctx.arc(canvasX, canvasY, radius * CANVAS_SCALE, 0, 2 * Math.PI);
+                ctx.fill();
 
-        </script>
+                // Print data
+                if (!done_moving) {
+                    printData(`Time: ${time.toFixed(2)} s, X: ${x.toFixed(2)} m, Y: ${y.toFixed(2)} m Velocity: ${Math.sqrt(vx * vx + vy * vy).toFixed(2)} m/s`);
+                    drawVector(ctx, canvasX, canvasY, vx, vy, 'red'); // velocity vector
+                    drawVector(ctx, canvasX, canvasY, dragAx, dragAy, 'yellow'); //acceleration vector
+                }
+                else {
+                    printData(`Total Time: ${time.toFixed(2)} s, Final Velocity: ${Math.sqrt(vx * vx + vy * vy).toFixed(2)} m/s, Total Horizontal Distance: ${(x - x_initial).toFixed(2)} m, Trajectorial Apex: ${maxHeight.toFixed(2)} m, Path Length: ${drawPath().toFixed(2)} m`);
+                }
 
-        <!-- 
+            }, TIME_STEP * 1000);
+        }
+
+        function printData(data) {
+            const dataDiv = document.getElementById('data');
+            dataDiv.innerHTML = data;
+        }
+
+        function drawVector(ctx, startX, startY, vecX, vecY, color) {
+            ctx.strokeStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(startX + vecX, startY - vecY); // invert y for canvas coordinates
+            ctx.stroke();
+        }
+
+    </script>
+
+    <!-- 
         Todo: Add mass, size (for drag), wind calculations, 3d animated graph
         -->
-    </body>
+</body>
+
 </html>
