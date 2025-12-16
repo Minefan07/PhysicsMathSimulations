@@ -217,7 +217,7 @@
 
         function addParticles(amount) {
             for (var i = 0; i < amount; i++) {
-                changeParticle(Math.random() * canvas.width, Math.random() * canvas.width, Math.random() * 100, Math.random() * 100, parseFloat(RND(parseFloat(minMass.value), parseFloat(maxMass.value))), i);
+                changeParticle(Math.random() * canvas.width, Math.random() * canvas.height, Math.random() * 200 - 100, Math.random() * 200 - 100, parseFloat(RND(parseFloat(minMass.value), parseFloat(maxMass.value))), i);
                 //console.log(`${minMass.value} ${maxMass.value} ${particles[i].mass}`);
             }
         }
