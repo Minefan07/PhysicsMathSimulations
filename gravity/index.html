@@ -59,12 +59,15 @@
             font-size: 16px;
             cursor: pointer;
             position: relative;
-            float: right;
-            top: -30px;
         }
 
         .launch:active {
             background-image: linear-gradient(darkblue, darkgreen);
+        }
+
+        .launchleft {
+            position: initial;
+            clear: both;
         }
 
 
@@ -90,12 +93,31 @@
     <div id="menu"></div>
 
     <h1>Gravity Simulation</h1>
-    Large bodies are approximated by spheres. Then the laws of gravitation are applied with test points.
+    Large bodies are approximated by spheres. Then the laws of gravitation are applied with test points. <span
+        id="fpsdispl" class="fpsdispl">60 FPS</span>
 
     <canvas id="simulationCanvas" width="800" height="600" style="border:1px solid #000000;">
         Your browser does not support the HTML5 canvas tag.
-    </canvas><br><input type="button" id="launch" class="launch" value="Gravitate!" onclick="simulate()"><input
-        type="button" id="pauseBtn" class="launch" value="Pause" onclick="pause()">
+    </canvas>
+
+    <div class="below-canvas-content">
+
+        Number of objects:<input type="number" id="objectNo" placeholder="amount" step="1" value="500" min="1">
+        Simulation Speed:<input type="number" id="simSpeed" placeholder="multiplier" step="0.01" value="1" min="0"><br>
+        <input type="button" id="addPlanetBtn" class="launch launchleft" value="Add Planet"
+            onclick="addPlanet(parseFloat(document.getElementById('planetRad').value), parseFloat(document.getElementById('planetMas').value))">with
+        radius<input type="number" id="planetRad" placeholder="(px)" step="1" value="100" min="1">, mass<input
+            type="number" id="planetMas" placeholder="(powers of 10)" step="0.1" value="16" min="0"><br>
+        <input type="button" id="minusObjectsBtn" class="launch launchleft" value="-" onclick="removeObjects((isNaN(parseFloat(document.getElementById('addObjectNo').value))) ? 0 : (parseFloat(document.getElementById('addObjectNo').value)))"><input type="number"
+            id="addObjectNo" placeholder="amount" step="1" value="50" min="1">objects<input type="button"
+            id="minusObjectsBtn" class="launch launchleft" value="+" onclick="actuallyAddObjects((isNaN(parseFloat(document.getElementById('addObjectNo').value))) ? 0 : (parseFloat(document.getElementById('addObjectNo').value)))">
+
+
+        <span style="float: right; position: relative; top: -30px;"><input type="button" id="launch" class="launch"
+                value="Gravitate!" onclick="simulate()"><input type="button" id="pauseBtn" class="launch" value="Pause"
+                onclick="pause()">
+        </span>
+    </div>
 
     <script>
         const canvas = document.getElementById('simulationCanvas');
@@ -103,17 +125,94 @@
 
         // TODO
         /*
-            draggable planets
-            change speed of simulation
-            add small objects arbitrarily
+            draggable planets                   Done
+            change speed of simulation          Done
+            add small objects arbitrarily       Done
 
         */
+
+        var totalObjectNum = 0;
 
         const pauseBtn = document.getElementById('pauseBtn');
 
         document.addEventListener('resize', function () {
             resizeCanvas();
         });
+
+        var mouse = { xi: 0, yi: 0, xf: 0, yf: 0 };
+        var mouseX_curr = 0;
+        var mouseY_curr = 0;
+
+        var holdInt;
+
+        var heldMse = 0;
+        var firstMouse = false;
+
+        var movedPlanet = -1;
+
+        document.body.onmousedown = function () {
+            ++heldMse;
+            firstMouse = true;
+        }
+        document.body.onmouseup = function () {
+            --heldMse;
+            firstMouse = false;
+        }
+
+        document.body.onmousemove = function (e) {
+            mouseX_curr = e.clientX - canvas.getBoundingClientRect().left;
+            mouseY_curr = e.clientY - canvas.getBoundingClientRect().top;
+        }
+
+        function checkMouse() {
+            if (heldMse == 1 && firstMouse) {
+                firstMouse = false;
+                movedPlanet = -1;
+                mouse.xi = mouseX_curr;
+                mouse.yi = mouseY_curr;
+            }
+
+            if (heldMse == 1) {
+                // mouse is held, now do calculations
+                mouse.xi = mouse.xf;
+                mouse.yi = mouse.yf;
+                // update mouse final position
+                mouse.xf = mouseX_curr;
+                mouse.yf = mouseY_curr;
+
+                dragPlanet();
+            }
+
+            else {
+                movedPlanet = -1;
+            }
+        }
+
+        function isWithinRadius(x1, y1, x2, y2, radius) {
+            return (Math.sqrt(((x2 - x1) ** 2) + ((y2 - y1) ** 2)) <= radius);
+        }
+
+        function dragPlanet() {
+            // first determine which planet was moved
+            movedPlanet = -1;
+
+            for (let i = 0; i < planets.length; i++) {
+                if (isWithinRadius(mouse.xi, mouse.yi, planets[i].x, planets[i].y, planets[i].radius) && isWithinRadius(mouseX_curr, mouseY_curr, planets[i].x, planets[i].y, planets[i].radius)) {
+                    movedPlanet = i;
+                    break;
+                }
+            }
+
+            // then move that planet
+            if (movedPlanet != -1) {
+                planets[movedPlanet].x += (mouse.xf - mouse.xi);
+                planets[movedPlanet].y += (mouse.yf - mouse.yi);
+                //console.log(`x ${planets[movedPlanet].x} y ${planets[movedPlanet].y}`);
+                movedPlanet = -1;
+            }
+
+            //console.log(`Attempted to move planet ${movedPlanet}`);
+        }
 
         function resizeCanvas() {
             const canvas = document.getElementById('simulationCanvas');
@@ -128,7 +227,7 @@
         }
 
         var planets = [
-            { x: 300, y: 300, vx: 0, vy: 0, radius: 100,               mass: 10000000000000000 },
+            { x: 300, y: 300, vx: 0, vy: 0, radius: 100, mass: 10000000000000000 },
             { x: canvas.width - 230, y: 200, vx: 0, vy: 0, radius: 80, mass: 10000000000000000 }
         ];
         var objects = [
@@ -136,7 +235,17 @@
             { x: 200, y: 450, vx: 10, vy: -10, radius: 5, mass: 1 }
         ];
 
-        var frametime = 1 / 60; //seconds
+
+        var simSpeed = 1;
+        var frametime = simSpeed * (1 / 60); //seconds
+
+        var fixPlanets = false;
+
+        document.getElementById('simSpeed').addEventListener('change', function (e) {
+            simSpeed = isNaN(parseFloat(document.getElementById('simSpeed').value)) ? 1 : parseFloat(document.getElementById('simSpeed').value);
+            //console.log(`changed to ${simSpeed}`);
+            frametime = simSpeed * (1 / 60);
+        });
 
         var paused = false;
 
@@ -144,7 +253,7 @@
             if (paused) {
                 //unpause
                 paused = false;
-                frametime = 1 / 60;
+                frametime = simSpeed * (1 / 60);
                 pauseBtn.value = "Pause";
             }
             else {
@@ -162,21 +271,166 @@
             planets[index] = { x, y, vx, vy, radius, mass };
         }
 
-        function addObjects(amount) {
-            for (let i = 0; i < amount; i++) {
-                changeObject(Math.random() * canvas.width, Math.random() * canvas.height, Math.random() * 15 + 10, Math.random() * 15 + 10, 5, 1, i);
+        function addPlanet(radius, mass) {
+            changePlanet(canvas.width / 2, canvas.height / 2, 0, 0, radius, 10 ** mass, planets.length);
+        }
+
+        // pulling from /particle
+        function applyCollision(i1, i2, a1, a2) {
+            //change momenta of particles a and b
+            // pulling from /momentum
+            var x1 = a1[i1].x; var y1 = a1[i1].y; var vx1 = a1[i1].vx; var vy1 = a1[i1].vy;
+            var x2 = a2[i2].x; var y2 = a2[i2].y; var vx2 = a2[i2].vx; var vy2 = a2[i2].vy;
+
+            //TEMP!!
+            var mass1 = (a1[i1].mass);
+            var mass2 = (a2[i2].mass);
+
+            var radius1 = (a1[i1].radius);
+            var radius2 = (a2[i2].radius);
+
+            //console.log(`m1: ${particles[i1].mass}, m2: ${particles[i2].mass}`);
+
+            const dx = x2 - x1;
+            const dy = y2 - y1;
+            const distSq = dx * dx + dy * dy;
+            const minDist = radius1 + radius2;
+
+            //console.log(minDist);
+
+            if (distSq <= minDist * minDist) {
+                // COLLISION DETECTED.
+                usetimer = true;
+                timerthingy = 0;
+
+                const dist = Math.sqrt(distSq) || 1e-12;
+                // normal vector (from 1 to 2)
+
+                // unit vector n representing the direction of the n-axis
+                const nx = dx / dist;
+                const ny = dy / dist;
+
+                const nmag = Math.sqrt(nx * nx + ny * ny);
+
+                // tangent vector (needed to preserve all energy?)
+                const tx = -dy / dist;
+                const ty = dx / dist;
+
+
+                // find magnitude of velocity first
+                const v1mag = Math.sqrt(vx1 * vx1 + vy1 * vy1);
+                const v2mag = Math.sqrt(vx2 * vx2 + vy2 * vy2);
+
+                const theta_nt_xy = Math.atan2(ny, nx);
+
+                //find component of both velocity along n hat (the normal) and t hat (the tangent)
+                const v1norm = v1mag * Math.cos(Math.atan2(vy1, vx1) - theta_nt_xy);
+                const v1tan = v1mag * Math.sin(Math.atan2(vy1, vx1) - theta_nt_xy);
+
+                const v2norm = v2mag * Math.cos(Math.atan2(vy2, vx2) - theta_nt_xy);
+                const v2tan = v2mag * Math.sin(Math.atan2(vy2, vx2) - theta_nt_xy);
+
+                // use 1d elastic collision equations
+                const v1new = ((mass1 - mass2) / (mass1 + mass2)) * v1norm + ((2 * mass2) / (mass1 + mass2)) * v2norm;
+                const v2new = ((2 * mass1) / (mass1 + mass2)) * v1norm + ((mass2 - mass1) / (mass1 + mass2)) * v2norm;
+
+                const v1theta_nt_new = Math.atan2(v1tan, v1new);
+                const v2theta_nt_new = Math.atan2(v2tan, v2new);
+
+                const v1theta_xy_new = v1theta_nt_new + theta_nt_xy;
+                const v2theta_xy_new = v2theta_nt_new + theta_nt_xy;
+
+                const v1newmag = Math.sqrt(v1new * v1new + v1tan * v1tan);
+                const v2newmag = Math.sqrt(v2new * v2new + v2tan * v2tan);
+
+                vx1 = v1newmag * Math.cos(v1theta_xy_new);
+                vy1 = v1newmag * Math.sin(v1theta_xy_new);
+
+                vx2 = v2newmag * Math.cos(v2theta_xy_new);
+                vy2 = v2newmag * Math.sin(v2theta_xy_new);
+
+                // positional correction to avoid sinking (proportional to inverse masses)
+                const overlap = minDist - dist;
+                if (overlap > 0) {
+                    const percent = 0.8; // push them mostly out
+                    const correction = (overlap / (1 / mass1 + 1 / mass2)) * percent;
+                    // move spheres opposite ways by correction * (1/mass)
+                    x1 -= (correction * (1 / mass1)) * nx;
+                    y1 -= (correction * (1 / mass1)) * ny;
+                    x2 += (correction * (1 / mass2)) * nx;
+                    y2 += (correction * (1 / mass2)) * ny;
+                }
+
+                //now write data back to objects
+
+                a1[i1].x = x1; a1[i1].y = y1; a1[i1].vx = vx1; a1[i1].vy = vy1;
+                a2[i2].x = x2; a2[i2].y = y2; a2[i2].vx = vx2; a2[i2].vy = vy2;
             }
+        }
+
+        function addObjects(amount) {
+            totalObjectNum = amount;
+            let h = Math.floor(Math.sqrt(totalObjectNum));
+            for (let i = 0; i < totalObjectNum; i++) {
+                changeObject(10 + 20 * (i % h), 10 + 20 * Math.floor(i / h), 25, 25, 5, 1, i);
+                //console.log(`new obj. at (${objects[i].x.toFixed(2)}, ${objects[i].y.toFixed(2)})`);
+            }
+        }
+
+        function actuallyAddObjects(amount) {
+            totalObjectNum += amount;
+            let h = Math.floor(Math.sqrt(amount));
+            for (let i = totalObjectNum - amount; i < totalObjectNum; i++) {
+                changeObject(10 + 20 * ((i - totalObjectNum + amount) % h), 10 + 20 * Math.floor((i - totalObjectNum + amount) / h), 25, 25, 5, 1, i);
+            }
+        }
+
+        function removeObjects(amount) {
+            totalObjectNum -= amount;
+            objects.splice(totalObjectNum, amount);
+            if (totalObjectNum < 0) totalObjectNum = 0;
         }
 
         function renderPlanets() {
             for (let i = 0; i < planets.length; i++) {
                 ctx.beginPath();
-                ctx.strokeStyle = 'white';
-                ctx.fillStyle = 'white';
+                ctx.strokeStyle = `hsl(${i * 11}deg 50% 50%)`;
+                ctx.fillStyle = `hsl(${i * 11}deg 50% 50%)`;
                 ctx.arc(planets[i].x, planets[i].y, planets[i].radius, 0, 2 * Math.PI, true);
                 ctx.fill();
 
+                var FG = calculateGravitationalFieldStrengthPlanets(planets[i].x, planets[i].y, i); //doesn't consider self
+
+                if (!fixPlanets) {  //fix planets to one spot so they do not interact gravitationally
+                    for (let j = 0; j < planets.length; j++) {
+                        if (i != j) {
+                            applyCollision(i, j, planets, planets);
+                        }
+                    }
+                }
+
+                if (planets[i].x < planets[i].radius) {
+                    planets[i].x = planets[i].radius;
+                    planets[i].vx = -planets[i].vx;
+                }
+                if (planets[i].x > canvas.width - planets[i].radius) {
+                    planets[i].x = canvas.width - planets[i].radius;
+                    planets[i].vx = -planets[i].vx;
+                }
+                if (planets[i].y < planets[i].radius) {
+                    planets[i].y = planets[i].radius;
+                    planets[i].vy = -planets[i].vy;
+                }
+                if (planets[i].y > canvas.height - planets[i].radius) {
+                    planets[i].y = canvas.height - planets[i].radius;
+                    planets[i].vy = -planets[i].vy;
+                }
+
+                planets[i].vx += (FG[0] / planets[i].mass) * frametime;
+                planets[i].vy += (FG[1] / planets[i].mass) * frametime;
+
                 planets[i].x += planets[i].vx * frametime;
+                planets[i].y += planets[i].vy * frametime;
             }
         }
 
@@ -193,98 +447,39 @@
                 var FG = calculateGravitationalFieldStrength(objects[i].x, objects[i].y);
                 //console.log(`x: ${objects[i].x}, y: ${objects[i].y}`);
 
-                objects[i].vx += (FG[0] / objects[i].mass) * frametime;
-                objects[i].vy += (FG[1] / objects[i].mass) * frametime;
                 //console.log(`vx: ${objects[i].vx}, vy: ${objects[i].vy}`);
+
+                for (let k = 0; k < objects.length; k++) {
+                    // collisions with other objects
+                    if (!(i == k)) {
+                        applyCollision(i, k, objects, objects);
+                    }
+                }
 
                 //check collisions
                 for (let j = 0; j < planets.length; j++) {
-                    var dist = Math.sqrt(((planets[j].x - objects[i].x) ** 2) + ((planets[j].y - objects[i].y) ** 2));
-
-                    const dx = planets[j].x - objects[i].x;
-                    const dy = planets[j].y - objects[i].y;
-                    const distSq = dx * dx + dy * dy;
-                    const minDist = planets[j].radius + objects[i].radius;
-
-                    if (distSq <= minDist * minDist) {
-                        // COLLISION DETECTED.
-                        usetimer = true;
-                        timerthingy = 0;
-
-                        const dist = Math.sqrt(distSq) || 1e-12;
-                        // normal vector (from 1 to 2)
-
-                        // unit vector n representing the direction of the n-axis
-                        const nx = dx / dist;
-                        const ny = dy / dist;
-
-                        const nmag = Math.sqrt(nx * nx + ny * ny);
-
-                        const mass1 = planets[j].mass;
-                        const mass2 = objects[i].mass;
-
-                        // tangent vector (needed to preserve all energy?)
-                        const tx = -dy / dist;
-                        const ty = dx / dist;
-
-                        // find magnitude of velocity first
-                        const v1mag = Math.sqrt(planets[j].vx * planets[j].vx + planets[j].vy * planets[j].vy);
-                        const v2mag = Math.sqrt(objects[i].vx * objects[i].vx + objects[i].vy * objects[i].vy);
-
-                        //v1 is planets[j]
-                        //v2 is objects[i]
-
-                        const theta_nt_xy = Math.atan2(ny, nx);
-
-                        //find component of both velocity along n hat (the normal) and t hat (the tangent)
-                        const v1norm = v1mag * Math.cos(Math.atan2(planets[j].vy, planets[j].vx) - theta_nt_xy);
-                        const v1tan = v1mag * Math.sin(Math.atan2(planets[j].vy, planets[j].vx) - theta_nt_xy);
-
-                        const v2norm = v2mag * Math.cos(Math.atan2(objects[i].vy, objects[i].vx) - theta_nt_xy);
-                        const v2tan = v2mag * Math.sin(Math.atan2(objects[i].vy, objects[i].vx) - theta_nt_xy);
-
-                        // use 1d elastic collision equations
-                        const v1new = ((mass1 - mass2) / (mass1 + mass2)) * v1norm + ((2 * mass2) / (mass1 + mass2)) * v2norm;
-                        const v2new = ((2 * mass1) / (mass1 + mass2)) * v1norm + ((mass2 - mass1) / (mass1 + mass2)) * v2norm;
-
-                        const v1theta_nt_new = Math.atan2(v1tan, v1new);
-                        const v2theta_nt_new = Math.atan2(v2tan, v2new);
-
-                        const v1theta_xy_new = v1theta_nt_new + theta_nt_xy;
-                        const v2theta_xy_new = v2theta_nt_new + theta_nt_xy;
-
-                        const v1newmag = Math.sqrt(v1new * v1new + v1tan * v1tan);
-                        const v2newmag = Math.sqrt(v2new * v2new + v2tan * v2tan);
-
-                        planets[j].vx = v1newmag * Math.cos(v1theta_xy_new);
-                        planets[j].vy = v1newmag * Math.sin(v1theta_xy_new);
-
-                        objects[i].vx = v2newmag * Math.cos(v2theta_xy_new);
-                        objects[i].vy = v2newmag * Math.sin(v2theta_xy_new);
-                    }
-
-                    if (objects[i].x < objects[i].radius) {
-                        objects[i].x = objects[i].radius;
-                        objects[i].vx = -objects[i].vx;
-                    }
-                    if (objects[i].x > canvas.width - objects[i].radius) {
-                        objects[i].x = canvas.width - objects[i].radius;
-                        objects[i].vx = -objects[i].vx;
-                    }
-                    if (objects[i].y < objects[i].radius) {
-                        objects[i].y = objects[i].radius;
-                        objects[i].vy = -objects[i].vy;
-                    }
-                    if (objects[i].y > canvas.height - objects[i].radius) {
-                        objects[i].y = canvas.height - objects[i].radius;
-                        objects[i].vy = -objects[i].vy;
-                    }
+                    applyCollision(i, j, objects, planets);
                 }
 
-                for (let k = 0; k < objects.length; k++){
-                    // collisions with other objects
-                    
+                if (objects[i].x < objects[i].radius) {
+                    objects[i].x = objects[i].radius;
+                    objects[i].vx = -objects[i].vx;
                 }
+                if (objects[i].x > canvas.width - objects[i].radius) {
+                    objects[i].x = canvas.width - objects[i].radius;
+                    objects[i].vx = -objects[i].vx;
+                }
+                if (objects[i].y < objects[i].radius) {
+                    objects[i].y = objects[i].radius;
+                    objects[i].vy = -objects[i].vy;
+                }
+                if (objects[i].y > canvas.height - objects[i].radius) {
+                    objects[i].y = canvas.height - objects[i].radius;
+                    objects[i].vy = -objects[i].vy;
+                }
+
+                objects[i].vx += (FG[0] / objects[i].mass) * frametime;
+                objects[i].vy += (FG[1] / objects[i].mass) * frametime;
 
                 objects[i].x += objects[i].vx * frametime;
                 objects[i].y += objects[i].vy * frametime;
@@ -292,14 +487,23 @@
         }
 
         function simulate() {
-            addObjects(100);
+            addObjects(isNaN(parseFloat(document.getElementById('objectNo').value)) ? 1 : parseFloat(document.getElementById('objectNo').value));
 
             const interval = setInterval(() => {
+                const fps1 = performance.now();
+
                 clearCanvas();
                 renderPlanets();
                 renderObjects();
+                checkMouse();
 
+                const fps2 = performance.now();
+                displayFPS(1000 / (fps2 - fps1), fps2 - fps1);
             }, frametime * 1000);
+        }
+
+        function displayFPS(fps, ftime) {
+            document.getElementById("fpsdispl").innerText = `${Math.min(Math.round(fps), 60)} FPS, ${Math.round(ftime)} ms`;
         }
 
         function calculateGravitationalFieldStrength(x, y) {
@@ -320,6 +524,25 @@
             return [Fx, Fy];
         }
 
+        function calculateGravitationalFieldStrengthPlanets(x, y, index) {
+            // consider all planetary masses then find the average
+            const G = 6.67430E-11;
+
+            var Fx = 0;
+            var Fy = 0;
+
+            for (let i = 0; i < planets.length; i++) {
+                var dist = Math.sqrt(((planets[i].x - x) ** 2) + ((planets[i].y - y) ** 2));
+                var angle = Math.atan2((planets[i].y - y), (planets[i].x - x));
+
+                if (i != index) {
+                    Fx += Math.cos(angle) * G * planets[i].mass / (dist * dist);
+                    Fy += Math.sin(angle) * G * planets[i].mass / (dist * dist);
+                }
+            }
+
+            return [Fx, Fy];
+        }
     </script>
 </body>
 
