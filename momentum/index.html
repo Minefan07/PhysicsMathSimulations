@@ -56,7 +56,12 @@
             border-radius: 3px;
             border: 0;
             color: white;
+        }
 
+        .ipt {
+            min-width: 120px;
+            text-align: center;
+            field-sizing: content;
         }
 
         .launch {
@@ -114,29 +119,30 @@
         (otherwise
         simulation will stop)<br>
 
-        Custom Drag Coefficient:<input type="number" id="customDragCoeff" placeholder="0.47 for a sphere" step="0.01"
-            value="0.47"><br>
-        Custom Coefficient of Kinetic Friction:<input type="number" id="customUK" placeholder="" step="0.01"
+        Custom Drag Coefficient:<input type="number" class="ipt" id="customDragCoeff" placeholder="0.47 for a sphere"
+            step="0.01" value="0.47"><br>
+        Custom Coefficient of Kinetic Friction:<input type="number" class="ipt" id="customUK" placeholder="" step="0.01"
             value="0.10" onchange=""><br>
-        Simulation Velocity Cutoff:<input type="number" id="velocityCutoff" placeholder="0.01 by default" step="0.01"
-            value="0.01"><br>
-        Cinematic Slowdown Amount:<input type="number" id="pauseSlowdown" placeholder="8 by default" step="1" value="8"
-            onchange="pauseSlowdownAmnt = parseFloat(this.value);"><br>
-        Cinematic Slowdown Radius:<input type="number" id="pauseRadius" placeholder="2 by default" step="0.01" value="2"
-            onchange="pauseRadius = parseFloat(this.value);"><br>
+        Simulation Velocity Cutoff:<input type="number" class="ipt" id="velocityCutoff" placeholder="0.01 by default"
+            step="0.01" value="0.01"><br>
+        Cinematic Slowdown Amount:<input type="number" class="ipt" id="pauseSlowdown" placeholder="8 by default"
+            step="1" value="8" onchange="pauseSlowdownAmnt = parseFloat(this.value);"><br>
+        Cinematic Slowdown Radius:<input type="number" class="ipt" id="pauseRadius" placeholder="2 by default"
+            step="0.01" value="2" onchange="pauseRadius = parseFloat(this.value);"><br>
     </div>
 
-    Radius of Both Spheres: <input type="number" id="radius" placeholder="(m)" value="1.0"
-        onchange="radius=parseFloat(this.value);">Grid Size: <input type="number" id="gridSize"
-        placeholder="Pixels per Meter" value="50" onchange="CANVAS_SCALE = parseFloat(this.value);"><br>
+    Radius of Both Spheres: <input type="number" class="ipt" id="radius" placeholder="(m)" value="1.0"
+        onchange="radius=parseFloat(this.value);">Grid Size:
+    <input type="number" class="ipt" id="gridSize" placeholder="Pixels per Meter" value="50"
+        onchange="CANVAS_SCALE = parseFloat(this.value);"><br>
 
-    <input type="number" id="mass1" placeholder="Mass of Sphere 1 (kg)">
-    <input type="number" id="velocity1" placeholder="Initial Velocity of Sphere 1 (m/s)">
-    <input type="number" id="angle1" placeholder="Initial Angle of Sphere 1"><br>
+    Green Sphere:<input type="number" class="ipt" id="mass1" placeholder="Mass (kg)">
+    <input type="number" class="ipt" id="velocity1" placeholder="Initial Speed (m/s)">
+    <input type="number" class="ipt" id="angle1" placeholder="Initial Angle"><br>
 
-    <input type="number" id="mass2" placeholder="Mass of Sphere 2 (kg)">
-    <input type="number" id="velocity2" placeholder="Initial Velocity of Sphere 2 (m/s)">
-    <input type="number" id="angle2" placeholder="Initial Angle of Sphere 2"><br>
+    Blue Sphere:<input type="number" class="ipt" id="mass2" placeholder="Mass (kg)">
+    <input type="number" class="ipt" id="velocity2" placeholder="Initial Speed (m/s)">
+    <input type="number" class="ipt" id="angle2" placeholder="Initial Angle"><br>
 
     <br><br>
 
@@ -175,6 +181,10 @@
         var drawGrid = false;
 
         var paused = false;
+
+        window.addEventListener('resize', function () {
+            resizeCanvas();
+        });
 
         function pause() {
             if (paused) {
@@ -317,7 +327,6 @@
                 // speed after deceleration (clamp to zero)
                 const v1_n = Math.max(0, mag1 - (dragAcc1 + fricAcc1) * timeStep);
                 const v2_n = Math.max(0, mag2 - (dragAcc2 + fricAcc2) * timeStep);
-
 
                 // preserve direction: scale components by ratio v_new / v_old
                 if (mag1 > 1e-12) {

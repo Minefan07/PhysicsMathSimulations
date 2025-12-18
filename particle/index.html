@@ -49,6 +49,11 @@
             display: block;
         }
 
+        .ipt {
+            min-width: 120px;
+            text-align: center;
+            field-sizing: content;
+        }
 
         .launch {
             border-radius: 5px;
@@ -58,15 +63,16 @@
             padding: 10px 20px;
             font-size: 16px;
             cursor: pointer;
-            position: relative;
-            float: right;
-            top: -30px;
         }
 
         .launch:active {
             background-image: linear-gradient(darkblue, darkgreen);
         }
 
+        .launchleft {
+            position: initial;
+            clear: both;
+        }
 
         input {
             margin: 5px;
@@ -97,11 +103,22 @@
         Your browser does not support the HTML5 canvas tag.
     </canvas>
 
-    Number of Particles: <input type="number" id="particleNo" placeholder="500 is a decent amount" step="1"
-        value="500" min="1"><br>Mass: min: <input type="number" id="minMass" placeholder="5 by default" step="0.1" value="5" min="1">
-    max: <input type="number" id="maxMass" placeholder="5 by default" step="0.1" value="5" min="1"><input type="button"
-        id="launch" class="launch" value="Launch!" onclick="runParticles()"><input type="button" id="pause"
-        class="launch" value="Pause" onclick="pause()">
+    Number of Particles:<input type="number" class="ipt" id="particleNo" placeholder="500 is a decent amount" step="1"
+        value="500" min="1" disabled>
+    Simulation speed:<input type="number" class="ipt" id="simSpeed" placeholder="speed" step="0.01" value="1"
+        min="0"><br>Mass:
+    min: <input type="number" class="ipt" id="minMass" placeholder="5 by default" step="0.1" value="5" min="1">
+    max: <input type="number" class="ipt" id="maxMass" placeholder="5 by default" step="0.1" value="5" min="1"><br>
+    <input type="button" id="minusParticlesBtn" class="launch launchleft" value="-"
+        onclick="removeParticles((isNaN(parseFloat(document.getElementById('addParticleNo').value))) ? 0 : (parseFloat(document.getElementById('addParticleNo').value)))">
+    <input type="number" class="ipt" id="addParticleNo" placeholder="amount" step="1" value="50" min="1">particles
+    <input type="button" id="plusParticlesBtn" class="launch launchleft" value="+"
+        onclick="actuallyAddParticles((isNaN(parseFloat(document.getElementById('addParticleNo').value))) ? 0 : (parseFloat(document.getElementById('addParticleNo').value)))">
+
+    <span style="float: right; position: relative; top: -65px;">
+        <input type="button" id="pause" class="launch" value="Pause" onclick="pause()">
+        <input type="button" id="launch" class="launch" value="Launch!" onclick="runParticles()">
+    </span>
 
     <script>
         /*
@@ -122,9 +139,18 @@
         const PARTICLE_MASS = 5;
         const GRID_SIZE = 2 * PARTICLE_RADIUS;
 
-        var totalParticleNum = 0;
+        var simSpeed = 1;
+        var frametime = simSpeed * (1 / 60); //seconds
 
-        var frametime = 1 / 60; //seconds
+        document.getElementById('simSpeed').addEventListener('change', function (e) {
+            simSpeed = isNaN(parseFloat(document.getElementById('simSpeed').value)) ? 1 : parseFloat(document.getElementById('simSpeed').value);
+            //console.log(`changed to ${simSpeed}`);
+            frametime = simSpeed * (1 / 60);
+        });
+
+        var totalParticleNum = 500;
+
+        var INTERVAL;
 
         var paused = false;
 
@@ -132,7 +158,7 @@
             if (paused) {
                 //unpause
                 paused = false;
-                frametime = 1 / 60;
+                frametime = simSpeed * (1 / 60);
                 pauseBtn.value = "Pause";
             }
             else {
@@ -151,8 +177,7 @@
 
         var particles = [{ x: 100, y: 100, vx: 10, vy: 100, mass: 5 }];
 
-
-        document.addEventListener('resize', function () {
+        window.addEventListener('resize', function () {
             resizeCanvas();
         });
 
@@ -189,6 +214,7 @@
             particles[index].x += particles[index].vx * frametime;
             particles[index].y += particles[index].vy * frametime;
 
+
             var padding = particles[index].mass;
 
             //flip either x or y velocity and fix bounds if necessary
@@ -224,7 +250,7 @@
         }
 
         function addParticles(amount) {
-            totalParticleNum = amount;
+            totalParticleNum = parseFloat(amount);
             for (var i = 0; i < amount; i++) {
                 changeParticle(Math.random() * canvas.width, Math.random() * canvas.height, Math.random() * 200 - 100, Math.random() * 200 - 100, parseFloat(RND(parseFloat(minMass.value), parseFloat(maxMass.value))), i);
                 //console.log(`${minMass.value} ${maxMass.value} ${particles[i].mass}`);
@@ -235,15 +261,16 @@
             totalParticleNum += amount;
             let h = Math.floor(Math.sqrt(amount));
             for (let i = totalParticleNum - amount; i < totalParticleNum; i++) {
-                //changeParticle(10 + 20 * ((i - totalObjectNum + amount) % h), 10 + 20 * Math.floor((i - totalObjectNum + amount) / h), 25, 25, 5, 1, i);
                 changeParticle(Math.random() * canvas.width, Math.random() * canvas.height, Math.random() * 200 - 100, Math.random() * 200 - 100, parseFloat(RND(parseFloat(minMass.value), parseFloat(maxMass.value))), i);
             }
+            document.getElementById('particleNo').value = totalParticleNum;
         }
 
         function removeParticles(amount) {
             totalParticleNum -= amount;
             particles.splice(totalParticleNum, amount);
             if (totalParticleNum < 0) totalParticleNum = 0;
+            document.getElementById('particleNo').value = totalParticleNum;
         }
 
         function isWithinRadius(x1, y1, x2, y2, radius) {
@@ -366,10 +393,12 @@
                 maxMass.value = 1;
             }
 
+
             addParticles((document.getElementById('particleNo').value));
 
+            clearInterval(INTERVAL);
             //iterate through every particle, then draw each one, and do any momentum calculations necessary.
-            const interval = setInterval(() => {
+            INTERVAL = setInterval(() => {
                 const fps1 = performance.now();
 
                 clearCanvas();
@@ -381,7 +410,7 @@
                 }
 
                 const fps2 = performance.now();
-                displayFPS(1000 / (fps2 - fps1), fps2-fps1);
+                displayFPS(1000 / (fps2 - fps1), fps2 - fps1);
             }, frametime * 1000);
         }
 

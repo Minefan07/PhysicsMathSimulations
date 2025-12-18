@@ -59,7 +59,9 @@
         }
 
         .ipt {
-            width: 120px;
+            min-width: 120px;
+            text-align: center;
+            field-sizing: content;
         }
 
         .launch {
@@ -110,27 +112,29 @@
         <option value="basketball">Basketball</option>
         <option value="tennisball">Tennis Ball</option>
     </select>
+    | Show Grid: <input type="checkbox" id="grid" value="Show Grid" onclick="drawTestGrid()"
+        onchange="drawGrid = this.checked;">
     <br>
     <div id="advancedSettings"
         style="display:none; border:1px solid gray; padding:10px; margin:10px; border-radius:5px;">
         <b>Advanced Options:</b><br>
         <input type="checkbox" id="disableDrag">Disable Air Resistance (No Drag)<br>
-        Custom gravity (m/s²): <input type="number" class="ipt" id="customGravity" placeholder="9.81 m/s² for Earth" value="9.81"
-            step="0.01"><br>
-        Custom Drag Coefficient: <input type="number" class="ipt" id="customDragCoeff" placeholder="0.47 for a sphere" step="0.01"
-            value="0.47" min="0"><br>
-        Simulation Speed: <input type="number" class="ipt" id="customSimSpeed" placeholder="1 by default" step="0.01" value="1"
-            min="0"><br>
+        Custom gravity (m/s²): <input type="number" class="ipt" id="customGravity" placeholder="9.81 m/s² for Earth"
+            value="9.81" step="0.01"><br>
+        Custom Drag Coefficient: <input type="number" class="ipt" id="customDragCoeff" placeholder="0.47 for a sphere"
+            step="0.01" value="0.47" min="0"><br>
+        Simulation Speed: <input type="number" class="ipt" id="customSimSpeed" placeholder="1 by default" step="0.01"
+            value="1" min="0"><br>
     </div>
     <input type="number" class="ipt" id="mass" placeholder="Mass (kg)" min="0">
     <input type="number" class="ipt" id="radius" placeholder="Radius (m)" min="0">
     <input type="number" class="ipt" id="angle" placeholder="Launch Angle (degrees)" min="0" max="100">
     <input type="number" class="ipt" id="velocity" placeholder="Initial Velocity (m/s)" min="0">
     Grid Size: <input type="number" class="ipt" id="gridSize" placeholder="Pixels per Meter" value="50"
-        onchange="CANVAS_SCALE = (parseFloat(this.value) < 0.0000000001) ? 0.0000000001 : parseFloat(this.value);" min="0.0000000001"><br>
+        onchange="CANVAS_SCALE = (parseFloat(this.value) < 0.0000000001) ? 0.0000000001 : parseFloat(this.value);"
+        min="0.0000000001"><br>
     <input type="button" id="launch" class="launch" value="Launch!" onclick="launchProjectile()">
     <input type="button" id="pause" class="launch" value="Pause" onclick="pause()">
-    <input type="button" id="grid" class="launch" value="Show Grid" onclick="drawTestGrid()">
     <br><br>
 
     <div id="data"></div>
@@ -142,13 +146,25 @@
 
         const pauseBtn = document.getElementById('pause');
 
+        const canvas = document.getElementById('simulationCanvas');
+
         const TIME_STEP = 1 / 60;
+
+        var drawGrid = false;
+
+        var drawVectors = true;
+
+        var INTERVAL;
 
         var disableDrag = false;
         var paused = false;
 
         simSpeed.addEventListener('change', function () {
             timeStep = parseFloat(simSpeed.value) * TIME_STEP;
+        });
+
+        window.addEventListener('resize', function () {
+            resizeCanvas();
         });
 
         function pause() {
@@ -270,21 +286,25 @@
             const canvas = document.getElementById('simulationCanvas');
             const ctx = canvas.getContext('2d');
             ctx.strokeStyle = 'gray';
-            for (let x = 0; x <= canvas.width; x += CANVAS_SCALE) {
-                ctx.beginPath();
-                ctx.moveTo(x, 0);
-                ctx.lineTo(x, canvas.height);
-                ctx.stroke();
-            }
-            for (let y = 0; y <= canvas.height; y += CANVAS_SCALE) {
-                ctx.beginPath();
-                ctx.moveTo(0, y);
-                ctx.lineTo(canvas.width, y);
-                ctx.stroke();
+            if (CANVAS_SCALE > 0.5) {
+                for (let x = 0; x <= canvas.width; x += CANVAS_SCALE) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, canvas.height);
+                    ctx.stroke();
+                }
+                for (let y = 0; y <= canvas.height; y += CANVAS_SCALE) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(canvas.width, y);
+                    ctx.stroke();
+                }
             }
         }
 
         function launchProjectile() {
+            clearInterval(INTERVAL);
+
             var mass = parseFloat(document.getElementById('mass').value);
             var radius = parseFloat(document.getElementById('radius').value);
             var angle = parseFloat(document.getElementById('angle').value) * (Math.PI / 180); // convert to radians
@@ -304,15 +324,15 @@
             };
 
             // prevent negatives
-            mass = Math.abs(mass);      document.getElementById('mass').value = mass;
-            radius = Math.abs(radius);  document.getElementById('radius').value = radius;
+            mass = Math.abs(mass); document.getElementById('mass').value = mass;
+            radius = Math.abs(radius); document.getElementById('radius').value = radius;
             if (angle > 100 * Math.PI / 180 || angle < 0) {
                 angle = Math.abs(angle);
                 if (angle > 100 * Math.PI / 180 || angle < 0) {
                     angle = Math.PI / 4.0;
                 }
                 document.getElementById('angle').value = angle * 180 / Math.PI;
-            } 
+            }
             velocity = Math.abs(velocity);
             if (speedIpt < 0) {
                 speedIpt = 1;
@@ -327,7 +347,7 @@
                 (document.getElementById('gridSize').value) = 0.0000000001;
                 CANVAS_SCALE = parseFloat(document.getElementById('gridSize').value);
             }
-            
+
 
             // Initial velocity components
             let vx = velocity * Math.cos(angle);
@@ -349,7 +369,7 @@
 
             render3dSimulation(x, y);
 
-            const interval = setInterval(() => {
+            INTERVAL = setInterval(() => {
                 const dragForce = findDrag(Math.sqrt(vx * vx + vy * vy), radius);
                 const dragAcceleration = dragForce / mass;
 
@@ -368,12 +388,22 @@
 
                 if (y > maxHeight) maxHeight = y;
 
+                if (y * CANVAS_SCALE > 0.75 * canvas.height) {
+                    CANVAS_SCALE /= 1.01;
+                }
+
+                if (x * CANVAS_SCALE > 0.8 * canvas.width) {
+                    CANVAS_SCALE /= 1.01;
+                }
+
+                document.getElementById('gridSize').value = CANVAS_SCALE;
+
                 //console.log(`x: ${x}, y: ${y}, vx: ${vx}, vy: ${vy}, angle: ${Math.atan(vy/vx)*(180/Math.PI)}`);
 
                 // Stop simulation if projectile hits the ground
                 if (y <= radius) {
                     done_moving = true;
-                    clearInterval(interval);
+                    clearInterval(INTERVAL);
                 }
 
                 if (!paused) {
@@ -392,11 +422,17 @@
                 ctx.arc(canvasX, canvasY, radius * CANVAS_SCALE, 0, 2 * Math.PI);
                 ctx.fill();
 
+                if (drawGrid) {
+                    drawTestGrid();
+                }
+
                 // Print data
                 if (!done_moving) {
                     printData(`Time: ${time.toFixed(2)} s, X: ${x.toFixed(2)} m, Y: ${y.toFixed(2)} m Velocity: ${Math.sqrt(vx * vx + vy * vy).toFixed(2)} m/s`);
-                    drawVector(ctx, canvasX, canvasY, vx, vy, 'red'); // velocity vector
-                    drawVector(ctx, canvasX, canvasY, dragAx, dragAy, 'yellow'); //acceleration vector
+                    if (drawVectors) {
+                        drawVector(ctx, canvasX, canvasY, vx, vy, 'red'); // velocity vector
+                        drawVector(ctx, canvasX, canvasY, dragAx, dragAy, 'yellow'); //acceleration vector
+                    }
                 }
                 else {
                     printData(`Total Time: ${time.toFixed(2)} s, Final Velocity: ${Math.sqrt(vx * vx + vy * vy).toFixed(2)} m/s, Total Horizontal Distance: ${(x - x_initial).toFixed(2)} m, Trajectorial Apex: ${maxHeight.toFixed(2)} m, Path Length: ${drawPath().toFixed(2)} m`);

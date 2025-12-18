@@ -78,7 +78,12 @@
             border-radius: 3px;
             border: 0;
             color: white;
+        }
 
+        .ipt {
+            min-width: 120px;
+            text-align: center;
+            field-sizing: content;
         }
 
         .fpsdispl {
@@ -102,20 +107,25 @@
 
     <div class="below-canvas-content">
 
-        Number of objects:<input type="number" id="objectNo" placeholder="amount" step="1" value="500" min="1">
-        Simulation Speed:<input type="number" id="simSpeed" placeholder="multiplier" step="0.01" value="1" min="0"><br>
-        <input type="button" id="addPlanetBtn" class="launch launchleft" value="Add Planet"
-            onclick="addPlanet(parseFloat(document.getElementById('planetRad').value), parseFloat(document.getElementById('planetMas').value))">with
-        radius<input type="number" id="planetRad" placeholder="(px)" step="1" value="100" min="1">, mass<input
-            type="number" id="planetMas" placeholder="(powers of 10)" step="0.1" value="16" min="0"><br>
-        <input type="button" id="minusObjectsBtn" class="launch launchleft" value="-" onclick="removeObjects((isNaN(parseFloat(document.getElementById('addObjectNo').value))) ? 0 : (parseFloat(document.getElementById('addObjectNo').value)))">
-        <input type="number" id="addObjectNo" placeholder="amount" step="1" value="50" min="1">objects
-        <input type="button" id="minusObjectsBtn" class="launch launchleft" value="+" onclick="actuallyAddObjects((isNaN(parseFloat(document.getElementById('addObjectNo').value))) ? 0 : (parseFloat(document.getElementById('addObjectNo').value)))">
+        Number of objects:<input type="number" class="ipt" id="objectNo" placeholder="amount" step="1" value="500"
+            min="1">
+        Simulation Speed:<input type="number" class="ipt" id="simSpeed" placeholder="multiplier" step="0.01" value="1"
+            min="0"><br>
+            <input type="button" id="minusPlanetBtn" class="launch launchleft" value="Remove Planet"
+            onclick="removePlanet()"> Radius<input type="number" class="ipt" id="planetRad" placeholder="(px)" step="1" value="100" min="1">, mass
+        <input type="number" class="ipt" id="planetMas" placeholder="(powers of 10)" step="0.1" value="16" min="0"><input type="button" id="addPlanetBtn" class="launch launchleft" value="Add Planet"
+            onclick="addPlanet(parseFloat(document.getElementById('planetRad').value), parseFloat(document.getElementById('planetMas').value))">
+        <br>
+        <input type="button" id="minusObjectsBtn" class="launch launchleft" value="-"
+            onclick="removeObjects((isNaN(parseFloat(document.getElementById('addObjectNo').value))) ? 0 : (parseFloat(document.getElementById('addObjectNo').value)))">
+        <input type="number" class="ipt" id="addObjectNo" placeholder="amount" step="1" value="50" min="1">objects
+        <input type="button" id="plusObjectsBtn" class="launch launchleft" value="+"
+            onclick="actuallyAddObjects((isNaN(parseFloat(document.getElementById('addObjectNo').value))) ? 0 : (parseFloat(document.getElementById('addObjectNo').value)))">
 
 
-        <span style="float: right; position: relative; top: -75px;"><input type="button" id="launch" class="launch"
-                value="Gravitate!" onclick="simulate()"><input type="button" id="pauseBtn" class="launch" value="Pause"
-                onclick="pause()">
+        <span style="float: right; position: relative; top: -75px;">
+            <input type="button" id="pauseBtn" class="launch" value="Pause" onclick="pause()">
+            <input type="button" id="launch" class="launch" value="Gravitate!" onclick="simulate()">
         </span>
     </div>
 
@@ -127,7 +137,7 @@
 
         const pauseBtn = document.getElementById('pauseBtn');
 
-        document.addEventListener('resize', function () {
+        window.addEventListener('resize', function () {
             resizeCanvas();
         });
 
@@ -381,6 +391,10 @@
             totalObjectNum -= amount;
             objects.splice(totalObjectNum, amount);
             if (totalObjectNum < 0) totalObjectNum = 0;
+        }
+
+        function removePlanet() {
+            planets.splice(planets.length - 1, 1);
         }
 
         function renderPlanets() {
