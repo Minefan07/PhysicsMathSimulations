@@ -89,6 +89,17 @@
         .fpsdispl {
             float: right;
         }
+
+        .testPtInfo {
+            display: none;
+            position: relative;
+            width: fit-content;
+            background: #333333;
+            border: #333333 solid 5px;
+            border-radius: 5px;
+            top: -350px;
+            left: 300px;
+        }
     </style>
 </head>
 
@@ -98,22 +109,31 @@
     <div id="menu"></div>
 
     <h1>Gravity Simulation</h1>
-    Large bodies are approximated by spheres. Then the laws of gravitation are applied with test points. <span
+    Large bodies are approximated by spheres. Then the laws of gravitation are applied with 1 kg objects.<br>You can also right-click on the simulation to place a test point; right-click on the information to hide it. <span
         id="fpsdispl" class="fpsdispl">60 FPS</span>
 
     <canvas id="simulationCanvas" width="800" height="600" style="border:1px solid #000000;">
         Your browser does not support the HTML5 canvas tag.
     </canvas>
 
+    <span style="display:block;height: 0px;">
+        <div id="testPtInfo" class="testPtInfo"></div>
+    </span>
+
     <div class="below-canvas-content">
 
         Number of objects:<input type="number" class="ipt" id="objectNo" placeholder="amount" step="1" value="500"
             min="1">
         Simulation Speed:<input type="number" class="ipt" id="simSpeed" placeholder="multiplier" step="0.01" value="1"
-            min="0"><br>
-            <input type="button" id="minusPlanetBtn" class="launch launchleft" value="Remove Planet"
-            onclick="removePlanet()"> Radius<input type="number" class="ipt" id="planetRad" placeholder="(px)" step="1" value="100" min="1">, mass
-        <input type="number" class="ipt" id="planetMas" placeholder="(powers of 10)" step="0.1" value="16" min="0"><input type="button" id="addPlanetBtn" class="launch launchleft" value="Add Planet"
+            min="0">
+        Show Gravity Vectors:<input type="checkbox" id="showVectorGChk" onchange="showVectorG=this.checked;" checked>
+        Show Velocity Vectors:<input type="checkbox" id="showVectorVChk" onchange="showVectorV=this.checked;">
+        <br>
+        <input type="button" id="minusPlanetBtn" class="launch launchleft" value="Remove Planet"
+            onclick="removePlanet()"> Radius<input type="number" class="ipt" id="planetRad" placeholder="(px)" step="1"
+            value="100" min="1">, mass
+        <input type="number" class="ipt" id="planetMas" placeholder="(powers of 10)" step="0.1" value="16"
+            min="0"><input type="button" id="addPlanetBtn" class="launch launchleft" value="Add Planet"
             onclick="addPlanet(parseFloat(document.getElementById('planetRad').value), parseFloat(document.getElementById('planetMas').value))">
         <br>
         <input type="button" id="minusObjectsBtn" class="launch launchleft" value="-"
@@ -127,11 +147,14 @@
             <input type="button" id="pauseBtn" class="launch" value="Pause" onclick="pause()">
             <input type="button" id="launch" class="launch" value="Gravitate!" onclick="simulate()">
         </span>
+
     </div>
 
     <script>
         const canvas = document.getElementById('simulationCanvas');
         const ctx = canvas.getContext('2d');
+
+        const testPtInfo = document.getElementById('testPtInfo');
 
         var totalObjectNum = 0;
 
@@ -145,12 +168,20 @@
         var mouseX_curr = 0;
         var mouseY_curr = 0;
 
+        var test_point = { x: -200, y: -200 };
+
+        var showTestPt = true;
+
         var holdInt;
 
         var heldMse = 0;
         var firstMouse = false;
 
         var movedPlanet = -1;
+
+        var showInfoText = true;
+        var showVectorG = true;
+        var showVectorV = false;
 
         document.body.onmousedown = function () {
             ++heldMse;
@@ -164,6 +195,32 @@
         document.body.onmousemove = function (e) {
             mouseX_curr = e.clientX - canvas.getBoundingClientRect().left;
             mouseY_curr = e.clientY - canvas.getBoundingClientRect().top;
+        }
+
+        canvas.addEventListener('contextmenu', (event) => {
+            event.preventDefault();
+            placeTestPoint(mouseX_curr, mouseY_curr);
+        });
+
+        testPtInfo.addEventListener('contextmenu', (event) => {
+            event.preventDefault();
+            hideTestPoint();
+        });
+
+        function placeTestPoint(x, y) {
+            showTestPt = true;
+            test_point.x = x;
+            test_point.y = y;
+
+            testPtInfo.style.position = 'relative';
+            testPtInfo.style.display = 'block';
+            testPtInfo.style.top = `${-canvas.height + test_point.y}px`;
+            testPtInfo.style.left = `${test_point.x}px`;
+        }
+
+        function hideTestPoint() {
+            showTestPt = false;
+            testPtInfo.style.display = 'none';
         }
 
         function checkMouse() {
@@ -237,7 +294,6 @@
             { x: 200, y: 450, vx: 10, vy: -10, radius: 5, mass: 1 }
         ];
 
-
         var simSpeed = 1;
         var frametime = simSpeed * (1 / 60); //seconds
 
@@ -274,7 +330,7 @@
         }
 
         function addPlanet(radius, mass) {
-            changePlanet(canvas.width / 2, canvas.height / 2, 0, 0, radius, 10 ** mass, planets.length);
+            changePlanet(canvas.width / 2 + Math.random() * 10 - 5, canvas.height / 2 + Math.random() * 10 - 5, 0, 0, radius, 10 ** mass, planets.length); // purpose of Math.random() here is to 'jiggle' the spawning; if one planet spawns directly atop another the visuals break
         }
 
         // pulling from /particle
@@ -405,6 +461,21 @@
                 ctx.arc(planets[i].x, planets[i].y, planets[i].radius, 0, 2 * Math.PI, true);
                 ctx.fill();
 
+                // render mass text
+                if (showInfoText) {
+                    ctx.beginPath();
+                    //ctx.strokeStyle = `hsl(${i * 11 + 180}deg 50% 50%)`;
+                    ctx.strokeStyle = 'black';
+                    //ctx.fillStyle = `hsl(${i * 11 + 180}deg 50% 50%)`;
+                    ctx.fillStyle = 'white';
+                    ctx.font = `${planets[i].radius / 3}px Arial`;
+                    const w = ctx.measureText(planets[i].mass.toExponential());
+                    //console.log(w.width);
+                    ctx.fillText(roundExp(planets[i].mass, 2) + " kg", planets[i].x - ctx.measureText(roundExp(planets[i].mass, 2) + " kg").width / 2, planets[i].y);
+                    ctx.fillText(planets[i].radius + " m", planets[i].x - ctx.measureText(planets[i].radius + " m").width / 2, planets[i].y + planets[i].radius / 3);
+
+                }
+
                 var FG = calculateGravitationalFieldStrengthPlanets(planets[i].x, planets[i].y, i); //doesn't consider self
 
                 if (!fixPlanets) {  //fix planets to one spot so they do not interact gravitationally
@@ -437,6 +508,32 @@
 
                 planets[i].x += planets[i].vx * frametime;
                 planets[i].y += planets[i].vy * frametime;
+
+            }
+        }
+
+        function roundExp(num, places) {
+            let parts = num.toExponential().split("e");
+            let exponent = parseInt(parts[1]);
+            return (Math.round(num / (10 ** (exponent - places))) * (10 ** (exponent - places))).toExponential();
+        }
+
+        function renderTestPoint() {
+            var FG = calculateGravitationalFieldStrength(test_point.x, test_point.y);
+            let FGDir = Math.atan2(-FG[1], FG[0]) * 180 / Math.PI;
+            let FGMag = Math.sqrt(FG[0] * FG[0] + FG[1] * FG[1]);
+
+            if (showTestPt) {
+                ctx.beginPath();
+                ctx.fillStyle = 'white';
+                ctx.arc(test_point.x, test_point.y, 5, 0, 2 * Math.PI, true);
+                ctx.fill();
+
+                //now show data
+                drawVector(ctx, test_point.x, test_point.y, FG[0], -FG[1], 'yellow');
+
+                //draw box containing numerical data; add to DOM
+                testPtInfo.innerHTML = `${FGMag.toFixed(2)} N/kg, ${FGDir.toFixed(2)}°`;
             }
         }
 
@@ -451,6 +548,15 @@
                 var padding = 0.9;
                 //consider gravitational acceleration
                 var FG = calculateGravitationalFieldStrength(objects[i].x, objects[i].y);
+
+
+                if (showVectorG) {
+                    drawVector(ctx, objects[i].x, objects[i].y, (FG[0] / objects[i].mass), -(FG[1] / objects[i].mass), 'yellow');
+                }
+
+                if (showVectorV) {
+                    drawVector(ctx, objects[i].x, objects[i].y, objects[i].vx, -objects[i].vy, 'red');
+                }
                 //console.log(`x: ${objects[i].x}, y: ${objects[i].y}`);
 
                 //console.log(`vx: ${objects[i].vx}, vy: ${objects[i].vy}`);
@@ -502,6 +608,7 @@
                 renderPlanets();
                 renderObjects();
                 checkMouse();
+                renderTestPoint();
 
                 const fps2 = performance.now();
                 displayFPS(1000 / (fps2 - fps1), fps2 - fps1);
@@ -548,6 +655,14 @@
             }
 
             return [Fx, Fy];
+        }
+
+        function drawVector(ctx, startX, startY, vecX, vecY, color) {
+            ctx.strokeStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(startX + vecX, startY - vecY); // invert y for canvas coordinates
+            ctx.stroke();
         }
     </script>
 </body>
