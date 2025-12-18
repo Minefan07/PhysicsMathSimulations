@@ -104,6 +104,11 @@
         class="launch" value="Pause" onclick="pause()">
 
     <script>
+        /*
+            TODO: add buttons that can change particle amount (as in /gravity)
+        */
+
+
         const canvas = document.getElementById('simulationCanvas');
         const ctx = canvas.getContext('2d');
 
@@ -115,6 +120,8 @@
         const PARTICLE_RADIUS = 5; //pixels
         const PARTICLE_MASS = 5;
         const GRID_SIZE = 2 * PARTICLE_RADIUS;
+
+        var totalParticleNum = 0;
 
         var frametime = 1 / 60; //seconds
 
@@ -216,10 +223,26 @@
         }
 
         function addParticles(amount) {
+            totalParticleNum = amount;
             for (var i = 0; i < amount; i++) {
                 changeParticle(Math.random() * canvas.width, Math.random() * canvas.height, Math.random() * 200 - 100, Math.random() * 200 - 100, parseFloat(RND(parseFloat(minMass.value), parseFloat(maxMass.value))), i);
                 //console.log(`${minMass.value} ${maxMass.value} ${particles[i].mass}`);
             }
+        }
+
+        function actuallyAddParticles(amount) {
+            totalParticleNum += amount;
+            let h = Math.floor(Math.sqrt(amount));
+            for (let i = totalParticleNum - amount; i < totalParticleNum; i++) {
+                //changeParticle(10 + 20 * ((i - totalObjectNum + amount) % h), 10 + 20 * Math.floor((i - totalObjectNum + amount) / h), 25, 25, 5, 1, i);
+                changeParticle(Math.random() * canvas.width, Math.random() * canvas.height, Math.random() * 200 - 100, Math.random() * 200 - 100, parseFloat(RND(parseFloat(minMass.value), parseFloat(maxMass.value))), i);
+            }
+        }
+
+        function removeParticles(amount) {
+            totalParticleNum -= amount;
+            particles.splice(totalParticleNum, amount);
+            if (totalParticleNum < 0) totalParticleNum = 0;
         }
 
         function isWithinRadius(x1, y1, x2, y2, radius) {

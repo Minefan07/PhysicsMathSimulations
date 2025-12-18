@@ -108,9 +108,9 @@
             onclick="addPlanet(parseFloat(document.getElementById('planetRad').value), parseFloat(document.getElementById('planetMas').value))">with
         radius<input type="number" id="planetRad" placeholder="(px)" step="1" value="100" min="1">, mass<input
             type="number" id="planetMas" placeholder="(powers of 10)" step="0.1" value="16" min="0"><br>
-        <input type="button" id="minusObjectsBtn" class="launch launchleft" value="-" onclick="removeObjects((isNaN(parseFloat(document.getElementById('addObjectNo').value))) ? 0 : (parseFloat(document.getElementById('addObjectNo').value)))"><input type="number"
-            id="addObjectNo" placeholder="amount" step="1" value="50" min="1">objects<input type="button"
-            id="minusObjectsBtn" class="launch launchleft" value="+" onclick="actuallyAddObjects((isNaN(parseFloat(document.getElementById('addObjectNo').value))) ? 0 : (parseFloat(document.getElementById('addObjectNo').value)))">
+        <input type="button" id="minusObjectsBtn" class="launch launchleft" value="-" onclick="removeObjects((isNaN(parseFloat(document.getElementById('addObjectNo').value))) ? 0 : (parseFloat(document.getElementById('addObjectNo').value)))">
+        <input type="number" id="addObjectNo" placeholder="amount" step="1" value="50" min="1">objects
+        <input type="button" id="minusObjectsBtn" class="launch launchleft" value="+" onclick="actuallyAddObjects((isNaN(parseFloat(document.getElementById('addObjectNo').value))) ? 0 : (parseFloat(document.getElementById('addObjectNo').value)))">
 
 
         <span style="float: right; position: relative; top: -75px;"><input type="button" id="launch" class="launch"
@@ -122,14 +122,6 @@
     <script>
         const canvas = document.getElementById('simulationCanvas');
         const ctx = canvas.getContext('2d');
-
-        // TODO
-        /*
-            draggable planets                   Done
-            change speed of simulation          Done
-            add small objects arbitrarily       Done
-
-        */
 
         var totalObjectNum = 0;
 

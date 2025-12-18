@@ -56,7 +56,10 @@
             border-radius: 3px;
             border: 0;
             color: white;
+        }
 
+        .ipt {
+            width: 120px;
         }
 
         .launch {
@@ -112,19 +115,19 @@
         style="display:none; border:1px solid gray; padding:10px; margin:10px; border-radius:5px;">
         <b>Advanced Options:</b><br>
         <input type="checkbox" id="disableDrag">Disable Air Resistance (No Drag)<br>
-        Custom gravity (m/s²): <input type="number" id="customGravity" placeholder="9.81 m/s² for Earth" value="9.81"
+        Custom gravity (m/s²): <input type="number" class="ipt" id="customGravity" placeholder="9.81 m/s² for Earth" value="9.81"
             step="0.01"><br>
-        Custom Drag Coefficient: <input type="number" id="customDragCoeff" placeholder="0.47 for a sphere" step="0.01"
-            value="0.47"><br>
-        Simulation Speed: <input type="number" id="customSimSpeed" placeholder="1 by default" step="0.1" value="1"
-            min="0.0000001"><br>
+        Custom Drag Coefficient: <input type="number" class="ipt" id="customDragCoeff" placeholder="0.47 for a sphere" step="0.01"
+            value="0.47" min="0"><br>
+        Simulation Speed: <input type="number" class="ipt" id="customSimSpeed" placeholder="1 by default" step="0.01" value="1"
+            min="0"><br>
     </div>
-    <input type="number" id="mass" placeholder="Mass (kg)">
-    <input type="number" id="radius" placeholder="Radius (m)">
-    <input type="number" id="angle" placeholder="Launch Angle (degrees)">
-    <input type="number" id="velocity" placeholder="Initial Velocity (m/s)">
-    Grid Size: <input type="number" id="gridSize" placeholder="Pixels per Meter" value="50"
-        onchange="CANVAS_SCALE = parseFloat(this.value);" min="0.0000000001"><br>
+    <input type="number" class="ipt" id="mass" placeholder="Mass (kg)" min="0">
+    <input type="number" class="ipt" id="radius" placeholder="Radius (m)" min="0">
+    <input type="number" class="ipt" id="angle" placeholder="Launch Angle (degrees)" min="0" max="100">
+    <input type="number" class="ipt" id="velocity" placeholder="Initial Velocity (m/s)" min="0">
+    Grid Size: <input type="number" class="ipt" id="gridSize" placeholder="Pixels per Meter" value="50"
+        onchange="CANVAS_SCALE = (parseFloat(this.value) < 0.0000000001) ? 0.0000000001 : parseFloat(this.value);" min="0.0000000001"><br>
     <input type="button" id="launch" class="launch" value="Launch!" onclick="launchProjectile()">
     <input type="button" id="pause" class="launch" value="Pause" onclick="pause()">
     <input type="button" id="grid" class="launch" value="Show Grid" onclick="drawTestGrid()">
@@ -282,12 +285,12 @@
         }
 
         function launchProjectile() {
-            const mass = parseFloat(document.getElementById('mass').value);
-            const radius = parseFloat(document.getElementById('radius').value);
-            const angle = parseFloat(document.getElementById('angle').value) * (Math.PI / 180); // convert to radians
-            const velocity = parseFloat(document.getElementById('velocity').value);
-            const gravIpt = parseFloat(document.getElementById('customGravity').value);
-            const speedIpt = parseFloat(simSpeed.value);
+            var mass = parseFloat(document.getElementById('mass').value);
+            var radius = parseFloat(document.getElementById('radius').value);
+            var angle = parseFloat(document.getElementById('angle').value) * (Math.PI / 180); // convert to radians
+            var velocity = parseFloat(document.getElementById('velocity').value);
+            var gravIpt = parseFloat(document.getElementById('customGravity').value);
+            var speedIpt = parseFloat(simSpeed.value);
 
             var iterations = 0;
 
@@ -295,10 +298,36 @@
 
             var done_moving = false;
 
-            if (isNaN(mass) || isNaN(radius) || isNaN(angle) || isNaN(velocity) || isNaN(speedIpt) || (speedIpt < 0)) {
+            if (isNaN(mass) || isNaN(radius) || isNaN(angle) || isNaN(velocity) || isNaN(speedIpt)) {
                 alert("Please enter valid numbers for all fields.");
                 return;
+            };
+
+            // prevent negatives
+            mass = Math.abs(mass);      document.getElementById('mass').value = mass;
+            radius = Math.abs(radius);  document.getElementById('radius').value = radius;
+            if (angle > 100 * Math.PI / 180 || angle < 0) {
+                angle = Math.abs(angle);
+                if (angle > 100 * Math.PI / 180 || angle < 0) {
+                    angle = Math.PI / 4.0;
+                }
+                document.getElementById('angle').value = angle * 180 / Math.PI;
+            } 
+            velocity = Math.abs(velocity);
+            if (speedIpt < 0) {
+                speedIpt = 1;
+                simSpeed.value = speedIpt;
             }
+
+            if (gravIpt < 0) {
+                alert("Warning: negative gravity means there will be upside-down freefall.");
+            }
+
+            if (parseFloat(document.getElementById('gridSize').value) < 0.0000000001) {
+                (document.getElementById('gridSize').value) = 0.0000000001;
+                CANVAS_SCALE = parseFloat(document.getElementById('gridSize').value);
+            }
+            
 
             // Initial velocity components
             let vx = velocity * Math.cos(angle);
