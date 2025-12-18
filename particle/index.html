@@ -96,19 +96,19 @@
     <div id="menu"></div>
 
     <h1>Particle Simulation</h1>
-    Yeah, this one's pretty straightforward. It's a momentum simulation, but with more balls. <span id="fpsdispl"
-        class="fpsdispl">60 FPS</span>
+    Yeah, this one's pretty straightforward. It's a momentum simulation, but with more balls.<br>
+    The colors of the balls are directly related to their speeds; red is slow, green is fast, and indigo is really fast!
+    <span id="fpsdispl" class="fpsdispl">0 FPS</span>
 
     <canvas id="simulationCanvas" width="800" height="600" style="border:1px solid #000000;">
         Your browser does not support the HTML5 canvas tag.
     </canvas>
 
-    Number of Particles:<input type="number" class="ipt" id="particleNo" placeholder="500 is a decent amount" step="1"
-        value="500" min="1" disabled>
     Simulation speed:<input type="number" class="ipt" id="simSpeed" placeholder="speed" step="0.01" value="1"
         min="0"><br>Mass:
     min: <input type="number" class="ipt" id="minMass" placeholder="5 by default" step="0.1" value="5" min="1">
-    max: <input type="number" class="ipt" id="maxMass" placeholder="5 by default" step="0.1" value="5" min="1"><br>
+    max: <input type="number" class="ipt" id="maxMass" placeholder="5 by default" step="0.1" value="5" min="1">(only
+    applies to new particles)<br>
     <input type="button" id="minusParticlesBtn" class="launch launchleft" value="-"
         onclick="removeParticles((isNaN(parseFloat(document.getElementById('addParticleNo').value))) ? 0 : (parseFloat(document.getElementById('addParticleNo').value)))">
     <input type="number" class="ipt" id="addParticleNo" placeholder="amount" step="1" value="50" min="1">particles
@@ -263,14 +263,14 @@
             for (let i = totalParticleNum - amount; i < totalParticleNum; i++) {
                 changeParticle(Math.random() * canvas.width, Math.random() * canvas.height, Math.random() * 200 - 100, Math.random() * 200 - 100, parseFloat(RND(parseFloat(minMass.value), parseFloat(maxMass.value))), i);
             }
-            document.getElementById('particleNo').value = totalParticleNum;
+            //document.getElementById('particleNo').value = totalParticleNum;
         }
 
         function removeParticles(amount) {
             totalParticleNum -= amount;
             particles.splice(totalParticleNum, amount);
             if (totalParticleNum < 0) totalParticleNum = 0;
-            document.getElementById('particleNo').value = totalParticleNum;
+            //document.getElementById('particleNo').value = totalParticleNum;
         }
 
         function isWithinRadius(x1, y1, x2, y2, radius) {
@@ -394,7 +394,7 @@
             }
 
 
-            addParticles((document.getElementById('particleNo').value));
+            addParticles(totalParticleNum);
 
             clearInterval(INTERVAL);
             //iterate through every particle, then draw each one, and do any momentum calculations necessary.
@@ -415,7 +415,7 @@
         }
 
         function displayFPS(fps, ftime) {
-            document.getElementById("fpsdispl").innerText = `${Math.min(Math.round(fps), 60)} FPS, ${Math.round(ftime)} ms`;
+            document.getElementById("fpsdispl").innerText = `${Math.min(Math.round(fps), 60)} FPS, ${Math.round(ftime)} ms, ${totalParticleNum} particles`;
         }
 
     </script>

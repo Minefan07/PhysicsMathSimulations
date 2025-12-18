@@ -390,10 +390,17 @@
 
                 if (y * CANVAS_SCALE > 0.75 * canvas.height) {
                     CANVAS_SCALE /= 1.01;
+                    if (y * CANVAS_SCALE > 0.85 * canvas.height) {
+                        CANVAS_SCALE /= 1.01;
+                    }
                 }
 
                 if (x * CANVAS_SCALE > 0.8 * canvas.width) {
                     CANVAS_SCALE /= 1.01;
+                    if (x * CANVAS_SCALE > 0.9 * canvas.width) {
+                        CANVAS_SCALE /= 1.01;
+
+                    }
                 }
 
                 document.getElementById('gridSize').value = CANVAS_SCALE;

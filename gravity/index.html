@@ -109,8 +109,9 @@
     <div id="menu"></div>
 
     <h1>Gravity Simulation</h1>
-    Large bodies are approximated by spheres. Then the laws of gravitation are applied with 1 kg objects.<br>You can also right-click on the simulation to place a test point; right-click on the information to hide it. <span
-        id="fpsdispl" class="fpsdispl">60 FPS</span>
+    Large bodies are approximated by spheres. Then the laws of gravitation are applied with 1 kg objects.<br>You can
+    also right-click on the simulation to place a test point; right-click on the information to hide it. <span
+        id="fpsdispl" class="fpsdispl">0 FPS</span>
 
     <canvas id="simulationCanvas" width="800" height="600" style="border:1px solid #000000;">
         Your browser does not support the HTML5 canvas tag.
@@ -121,9 +122,6 @@
     </span>
 
     <div class="below-canvas-content">
-
-        Number of objects:<input type="number" class="ipt" id="objectNo" placeholder="amount" step="1" value="500"
-            min="1">
         Simulation Speed:<input type="number" class="ipt" id="simSpeed" placeholder="multiplier" step="0.01" value="1"
             min="0">
         Show Gravity Vectors:<input type="checkbox" id="showVectorGChk" onchange="showVectorG=this.checked;" checked>
@@ -140,10 +138,13 @@
             onclick="removeObjects((isNaN(parseFloat(document.getElementById('addObjectNo').value))) ? 0 : (parseFloat(document.getElementById('addObjectNo').value)))">
         <input type="number" class="ipt" id="addObjectNo" placeholder="amount" step="1" value="50" min="1">objects
         <input type="button" id="plusObjectsBtn" class="launch launchleft" value="+"
-            onclick="actuallyAddObjects((isNaN(parseFloat(document.getElementById('addObjectNo').value))) ? 0 : (parseFloat(document.getElementById('addObjectNo').value)))">
+            onclick="actuallyAddObjects((isNaN(parseFloat(document.getElementById('addObjectNo').value))) ? 0 : (parseFloat(document.getElementById('addObjectNo').value)))"><br>
+        Percent Energy Loss on Collision:<input type="number" class="ipt" id="percentEnergyLossIpt"
+            placeholder="0% for perfect elasticity" step="0.1" value="0" min="0" max="100"
+            onchange="COLLISION_ENERGY_REMAINING = 1 - (parseFloat(this.value)/100);">
 
 
-        <span style="float: right; position: relative; top: -75px;">
+        <span style="float: right; position: relative; top: -125px;">
             <input type="button" id="pauseBtn" class="launch" value="Pause" onclick="pause()">
             <input type="button" id="launch" class="launch" value="Gravitate!" onclick="simulate()">
         </span>
@@ -156,7 +157,7 @@
 
         const testPtInfo = document.getElementById('testPtInfo');
 
-        var totalObjectNum = 0;
+        var totalObjectNum = 500;
 
         const pauseBtn = document.getElementById('pauseBtn');
 
@@ -182,6 +183,8 @@
         var showInfoText = true;
         var showVectorG = true;
         var showVectorV = false;
+
+        var COLLISION_ENERGY_REMAINING = 1; // 100%; perfectly elastic
 
         document.body.onmousedown = function () {
             ++heldMse;
@@ -305,6 +308,14 @@
             frametime = simSpeed * (1 / 60);
         });
 
+        document.getElementById('percentEnergyLossIpt').addEventListener('change', function (e) {
+            if (isNaN(parseFloat(document.getElementById('percentEnergyLossIpt').value)) || parseFloat(document.getElementById('percentEnergyLossIpt').value) > 100 || parseFloat(document.getElementById('percentEnergyLossIpt').value) < 0) {
+                document.getElementById('percentEnergyLossIpt').value = 0;
+                COLLISION_ENERGY_REMAINING = 1;
+            }
+        });
+
+
         var paused = false;
 
         function pause() {
@@ -401,11 +412,11 @@
                 const v1newmag = Math.sqrt(v1new * v1new + v1tan * v1tan);
                 const v2newmag = Math.sqrt(v2new * v2new + v2tan * v2tan);
 
-                vx1 = v1newmag * Math.cos(v1theta_xy_new);
-                vy1 = v1newmag * Math.sin(v1theta_xy_new);
+                vx1 = v1newmag * Math.cos(v1theta_xy_new) * COLLISION_ENERGY_REMAINING;
+                vy1 = v1newmag * Math.sin(v1theta_xy_new) * COLLISION_ENERGY_REMAINING;
 
-                vx2 = v2newmag * Math.cos(v2theta_xy_new);
-                vy2 = v2newmag * Math.sin(v2theta_xy_new);
+                vx2 = v2newmag * Math.cos(v2theta_xy_new) * COLLISION_ENERGY_REMAINING;
+                vy2 = v2newmag * Math.sin(v2theta_xy_new) * COLLISION_ENERGY_REMAINING;
 
                 // positional correction to avoid sinking (proportional to inverse masses)
                 const overlap = minDist - dist;
@@ -441,12 +452,14 @@
             for (let i = totalObjectNum - amount; i < totalObjectNum; i++) {
                 changeObject(10 + 20 * ((i - totalObjectNum + amount) % h), 10 + 20 * Math.floor((i - totalObjectNum + amount) / h), 25, 25, 5, 1, i);
             }
+            //document.getElementById('objectNo').value = totalObjectNum;
         }
 
         function removeObjects(amount) {
             totalObjectNum -= amount;
             objects.splice(totalObjectNum, amount);
             if (totalObjectNum < 0) totalObjectNum = 0;
+            //document.getElementById('objectNo').value = totalObjectNum;
         }
 
         function removePlanet() {
@@ -545,7 +558,6 @@
                 ctx.arc(objects[i].x, objects[i].y, objects[i].radius, 0, 2 * Math.PI, true);
                 ctx.fill();
 
-                var padding = 0.9;
                 //consider gravitational acceleration
                 var FG = calculateGravitationalFieldStrength(objects[i].x, objects[i].y);
 
@@ -599,7 +611,7 @@
         }
 
         function simulate() {
-            addObjects(isNaN(parseFloat(document.getElementById('objectNo').value)) ? 1 : parseFloat(document.getElementById('objectNo').value));
+            addObjects(totalObjectNum);
 
             const interval = setInterval(() => {
                 const fps1 = performance.now();
@@ -616,7 +628,7 @@
         }
 
         function displayFPS(fps, ftime) {
-            document.getElementById("fpsdispl").innerText = `${Math.min(Math.round(fps), 60)} FPS, ${Math.round(ftime)} ms`;
+            document.getElementById("fpsdispl").innerText = `${Math.min(Math.round(fps), 60)} FPS, ${Math.round(ftime)} ms, ${totalObjectNum} object(s), ${planets.length} planet(s)`;
         }
 
         function calculateGravitationalFieldStrength(x, y) {
